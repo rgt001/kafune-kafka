@@ -1,0 +1,16 @@
+/target/
+/.tools/
+/artifacts/
+/dist/
+__pycache__/
+*.py[cod]
+*.partial
+*.log
+.env
+.env.*
+!.env.example
+clusters.json
+*.pem
+*.key
+*.pfx
+*.p12

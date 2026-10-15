@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "sourceServerConnectionId": null,
+  "sourceServerConnectionName": "kafkalens-perf",
+  "sourceTopicName": "kafkalens-perf-balanced-20261014-source",
+  "destinationServerConnectionId": null,
+  "destinationServerConnectionName": "kafkalens-perf",
+  "destinationTopicName": "kafkalens-perf-balanced-20261014-destination",
+  "exportType": "TOPIC",
+  "destinationDirectory": null,
+  "exportKey": true,
+  "keyPattern": "key_#pid#_#oid#.bin",
+  "exportMessage": true,
+  "valuePattern": "value_#pid#_#oid#.bin",
+  "includeKey": true,
+  "includeValue": true,
+  "includeHeaders": true,
+  "preserveTimestamp": true,
+  "offsetType": "FIRST",
+  "startTimestamp": "2026-10-14 10:58:43",
+  "messageCount": 4000,
+  "selectedPartitionIds": [
+    0,
+    1,
+    2
+  ]
+}

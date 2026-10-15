@@ -1,0 +1,43 @@
+[package]
+name = "kafka-lens"
+version = "0.2.1"
+edition = "2024"
+default-run = "kafka-lens"
+description = "Native Kafka desktop explorer for Windows and Linux"
+license = "MIT"
+
+[lib]
+name = "kafka_lens"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kafka-lens"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+apache-avro = { version = "0.21", features = ["snappy"] }
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+directories = "6"
+eframe = { version = "0.33.3", default-features = false, features = ["default_fonts", "glow", "x11", "wayland"] }
+egui_extras = "0.33.3"
+env_logger = "0.11"
+hex = "0.4"
+image = { version = "0.25", default-features = false, features = ["png"] }
+log = "0.4"
+quick-xml = "0.38"
+rdkafka = { version = "0.39", default-features = false, features = ["tokio", "cmake-build", "ssl-vendored", "libz-static", "zstd", "curl", "curl-static"] }
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+rfd = "0.15"
+roxmltree = "0.21"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[profile.release]
+lto = "thin"
+strip = true
