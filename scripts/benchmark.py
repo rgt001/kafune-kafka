@@ -81,8 +81,8 @@ def main():
     parser.add_argument("--label", required=True)
     parser.add_argument("--operations", default="snapshot,read,search,export,import,replay,archive")
     parser.add_argument("--count", type=int, default=10000)
-    parser.add_argument("--topic", default="kafkalens-perf-20261014-source")
-    parser.add_argument("--destination", default="kafkalens-perf-20261014-destination")
+    parser.add_argument("--topic", default="kafunekafka-perf-20261014-source")
+    parser.add_argument("--destination", default="kafunekafka-perf-20261014-destination")
     parser.add_argument("--trials", type=int, default=5)
     args = parser.parse_args()
     results = []

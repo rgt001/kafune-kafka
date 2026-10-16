@@ -105,7 +105,7 @@ struct PendingSave {
     raw: bool,
 }
 
-pub struct KafkaLensApp {
+pub struct KafuneKafkaApp {
     pub profiles: Vec<ClusterProfile>,
     pub snapshots: BTreeMap<String, ClusterSnapshot>,
     selected_cluster: usize,
@@ -154,7 +154,7 @@ pub struct KafkaLensApp {
     screenshot_requested: bool,
     read_backend: Option<Arc<Backend>>,
 }
-impl KafkaLensApp {
+impl KafuneKafkaApp {
     pub fn new(cc: &eframe::CreationContext<'_>, smoke: Option<PathBuf>) -> Self {
         cc.egui_ctx.set_theme(egui::ThemePreference::Dark);
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
@@ -165,7 +165,7 @@ impl KafkaLensApp {
         Self::create(smoke)
     }
     pub fn create(smoke: Option<PathBuf>) -> Self {
-        let config_path = std::env::var_os("KAFKALENS_CONFIG")
+        let config_path = std::env::var_os("KAFUNEKAFKA_CONFIG")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
                 storage::profile_path().unwrap_or_else(|_| PathBuf::from("clusters.json"))
@@ -177,7 +177,7 @@ impl KafkaLensApp {
         let (sender, receiver) = mpsc::channel();
         let (jobs, job_receiver) = mpsc::channel();
         let worker_error = std::thread::Builder::new()
-            .name("kafkalens-worker".into())
+            .name("kafunekafka-worker".into())
             .spawn(move || job_worker(job_receiver, sender))
             .err()
             .map(|e| format!("Falha ao iniciar worker: {e}"));
@@ -233,7 +233,7 @@ impl KafkaLensApp {
             smoke_started: false,
             smoke_read_started: None,
             smoke_trial: 0,
-            smoke_remaining: std::env::var("KAFKALENS_SMOKE_REPEATS")
+            smoke_remaining: std::env::var("KAFUNEKAFKA_SMOKE_REPEATS")
                 .ok()
                 .and_then(|s| s.parse::<usize>().ok())
                 .filter(|n| *n > 0 && *n <= 10)
@@ -1152,7 +1152,7 @@ impl KafkaLensApp {
             ));
             // Optional settings for the native GUI benchmark; normal sessions
             // and the existing integration smoke keep their usual behavior.
-            let preferred = std::env::var("KAFKALENS_SMOKE_TOPIC").ok().or_else(|| {
+            let preferred = std::env::var("KAFUNEKAFKA_SMOKE_TOPIC").ok().or_else(|| {
                 std::fs::read(report_path)
                     .ok()
                     .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
@@ -1171,14 +1171,15 @@ impl KafkaLensApp {
                         .unwrap()
                         .topics
                         .iter()
-                        .find(|t| t.name.starts_with("kafkalens-it-source"))
+                        .find(|t| t.name.starts_with("kafunekafka-it-source"))
                         .map(|t| t.name.clone())
                 });
             if let Some(topic) = topic {
+                self.topic_filter = topic.clone();
                 self.selected_topics.insert(topic);
                 self.tab = Tab::Messages;
                 self.start_mode = 0;
-                self.limit = std::env::var("KAFKALENS_SMOKE_LIMIT")
+                self.limit = std::env::var("KAFUNEKAFKA_SMOKE_LIMIT")
                     .ok()
                     .and_then(|s| s.parse::<usize>().ok())
                     .filter(|n| *n > 0 && *n <= 20_000)
@@ -1256,17 +1257,17 @@ impl KafkaLensApp {
         ctx.request_repaint_after(Duration::from_millis(100));
     }
 }
-impl Drop for KafkaLensApp {
+impl Drop for KafuneKafkaApp {
     fn drop(&mut self) {
         self.cancel.store(true, Ordering::Relaxed);
     }
 }
-impl eframe::App for KafkaLensApp {
+impl eframe::App for KafuneKafkaApp {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
         self.receive();
         egui::TopBottomPanel::top("brand").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.heading(RichText::new("KafkaLens").color(Color32::from_rgb(85, 180, 255)));
+                ui.heading(RichText::new("kafunekafka").color(Color32::from_rgb(85, 180, 255)));
                 ui.weak("Explorar • inspecionar • reproduzir");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(&self.profile().name);
@@ -1551,7 +1552,7 @@ mod tests {
                 value: Some(vec![]),
             }],
         };
-        let mut app = KafkaLensApp::create(None);
+        let mut app = KafuneKafkaApp::create(None);
         app.records = vec![r.clone()];
         app.selected_record = Some(0);
         app.prepare_resend();

@@ -226,7 +226,7 @@ impl Backend {
         let mut config = ClientConfig::new();
         config
             .set("bootstrap.servers", &p.bootstrap_servers)
-            .set("client.id", "kafka-lens")
+            .set("client.id", "kafunekafka")
             .set("security.protocol", &p.security_protocol)
             .set("socket.timeout.ms", "10000");
         for (k, v) in &p.properties {
@@ -267,7 +267,7 @@ impl Backend {
                 "group.id",
                 group
                     .map(str::to_owned)
-                    .unwrap_or_else(|| format!("kafkalens-view-{}", uuid::Uuid::new_v4())),
+                    .unwrap_or_else(|| format!("kafunekafka-view-{}", uuid::Uuid::new_v4())),
             )
             .set("enable.auto.commit", "false")
             .set("enable.auto.offset.store", "false")

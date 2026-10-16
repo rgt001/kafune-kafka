@@ -1,153 +1,150 @@
-# KafkaLens
+# kafunekafka
 
-Aplicativo desktop em Rust para explorar Kafka no Windows e no Linux, inspirado no fluxo de trabalho do [Offset Explorer](https://www.kafkatool.com/).
+## Stop waiting for better software. Build it.
 
-## Baixar para Windows
+We're tired of desktop apps that need gigabytes of RAM just to display a few tables.
 
-Na página do repositório no GitHub, abra **Releases** e baixe `KafkaLens-v0.2.1-windows-x64.zip`. Extraia todo o ZIP e execute `KafkaLens.exe`, mantendo as DLLs na mesma pasta. Não precisa instalar Rust, Java ou o Offset Explorer. Docker serve apenas aos testes locais; o aplicativo se conecta ao Kafka pelos bootstrap servers configurados.
+So we built our own.
 
-Cada release inclui o ZIP, seu arquivo SHA-256, documentação e licenças das dependências. As credenciais e conexões do usuário não fazem parte do download. O código-fonte fica no Git; os executáveis ficam nos assets de cada release.
+**Open Source. AI-Built. Rust-Powered.**
 
-## Funções
+Less bloat. More performance. No excuses.
 
-| # | Função | Onde usar |
-|---|---|---|
-| 1 | Vários clusters, brokers, tópicos, partições e consumer groups | Barra lateral e aba Cluster |
-| 2 | Inspeção de mensagens e inclusão de novas mensagens | Mensagens e Enviar / Reenviar |
-| 3 | Offsets comprometidos, início/fim da partição e lag | Consumidores |
-| 4 | JSON, XML e Avro formatados | Mensagens, seletor de formato |
-| 5 | Salvar uma mensagem ou seu valor binário | Mensagens |
-| 6 | Importar mensagens de arquivos locais | Importar / Exportar / Replay |
-| 7 | Exportar tópicos, faixas ou a tabela carregada | Importar / Exportar / Replay |
-| 8 | Replay para outro tópico, inclusive em outro cluster | Importar / Exportar / Replay |
-| 9 | Enviar diretamente para um tópico e partição | Enviar / Reenviar |
-| 10 | Reenviar uma mensagem, editando seu conteúdo primeiro | Mensagens → Editar e reenviar |
-| 11 | Buscar em vários tópicos e partições, com texto ou regex | Buscar |
-| 12 | Executáveis nativos para Windows e Linux | Builds abaixo |
+**The revolution will be compiled.**
 
-## Uso
+---
 
-1. Cadastre os clusters em **Novo**. Preencha os bootstrap servers e, quando necessário, TLS, SASL/PLAIN ou SCRAM. Credenciais digitadas permanecem na sessão; um nome de variável de ambiente permite reaproveitá-las sem salvar a senha em disco.
-2. Clique em **Conectar / atualizar todos**. A interface mostra os clusters cadastrados e mantém as tarefas Kafka fora da thread gráfica.
-3. Marque um ou mais tópicos. Partições vazias significam todas; `0,1,2` seleciona partições específicas. Escolha início, últimas N mensagens por partição, offset ou timestamp Unix em milissegundos.
-4. Leia ou procure mensagens. Na tabela, selecione a mensagem para ver chave, valor e headers. O seletor **Auto** reconhece JSON, XML, Avro Confluent e arquivos Avro OCF (Null, Deflate e Snappy). Para um datum Avro sem cabeçalho, escolha **Avro bruto** e configure o schema local do cluster.
-5. Para reenviar, clique em **Editar e reenviar**, altere os campos desejados e envie. O envio aguarda confirmação do broker e mostra a partição e o novo offset.
+**A fast, native Kafka desktop client for Windows and Linux.**
 
-Tópicos de destino precisam existir. A versão inicial não inclui criação, exclusão de tópicos ou reset de offsets na interface; esses itens não fazem parte da lista final dos 12 requisitos.
+Browse clusters, inspect messages, find what matters, and replay events — from one desktop app built in Rust.
 
-## Importação, exportação e replay
+[**Download for Windows x64**](https://github.com/rgt001/kafune-kafka/releases/download/v0.3.0/kafunekafka-v0.3.0-windows-x64.zip) · [Linux x64](https://github.com/rgt001/kafune-kafka/releases/download/v0.3.0/kafunekafka-v0.3.0-linux-x64.tar.gz) · [All releases](https://github.com/rgt001/kafune-kafka/releases) · [Português](README.pt-BR.md)
 
-Importação e exportação usam JSONL `kafkalens.record.v1`. Cada linha preserva a mensagem com chave e valor em Base64, além de tópico/partição/offset de origem, timestamp e todos os headers. `null`, bytes vazios, dados binários e headers repetidos permanecem distintos.
+![kafunekafka on Windows](assets/kafunekafka-windows.png)
 
-```json
-{"format":"kafkalens.record.v1","topic":"orders","partition":0,"offset":42,"timestamp":1750000000000,"key_base64":null,"value_base64":"eyJpZCI6MX0=","headers":[{"key":"source","value_base64":"dGVzdA=="}]}
-```
+## Download and run
 
-O importador verifica todo o arquivo e as partições de destino antes do primeiro envio. A opção **Preservar partição** mantém a partição original; desmarcada, o produtor escolhe a partição. **Preservar timestamp** solicita o timestamp original. O broker atribui novos offsets e pode aplicar sua política de timestamps. Replay preserva bytes e headers sem converter JSON, XML ou Avro. Para Avro em outro cluster, configure um registry que resolva os mesmos IDs de schema da origem.
+1. Download `kafunekafka-v0.3.0-windows-x64.zip` from [Releases](https://github.com/rgt001/kafune-kafka/releases/latest).
+2. Extract the **entire ZIP** to a folder.
+3. Run **`kafunekafka.exe`**, keeping its DLLs alongside it.
+4. Add your Kafka bootstrap servers and connect.
 
-A leitura fixa os limites superiores das partições ao iniciar. Um produtor ativo não estende indefinidamente o replay. Limite de resultados é total; **últimas N** define o início por partição. Busca informa quantas mensagens examinou e quantos resultados encontrou. Regex segue a sintaxe do crate Rust `regex`, sem backreferences ou lookaround.
+No Rust toolchain, Java, Offset Explorer, or Docker installation is required to run the Windows app. Docker is only used for local development and integration tests. You need network access to your Kafka cluster.
 
-Os consumidores de inspeção usam atribuição explícita de partições, `read_committed` e commit automático desabilitado. Consulta e leitura não avançam os offsets dos grupos existentes. Mensagens de transações ainda abertas podem provocar timeout antes do limite superior do snapshot; a operação informa que o resultado é parcial.
-
-Tarefas podem ser canceladas. Exportações interrompidas preservam um arquivo `.partial`; falhas de importação/replay informam quantos envios já foram confirmados. A aplicação não repete automaticamente uma tarefa com resultado incerto. Os produtores têm idempotência habilitada dentro da sessão; reiniciar um import/replay pode publicar novamente as mesmas mensagens.
-
-Importação e replay mantêm até 8192 envios ou 8 MiB pendentes por operação. Uma mensagem maior usa a janela sozinha. O cancelamento para de enfileirar e aguarda os resultados de todos os envios pendentes antes de retornar. A ordem por partição, bytes, headers e timestamps são preservados conforme as opções da transferência.
-
-A tabela aceita até 20.000 resultados e retém até 128 MiB de dados por leitura/busca. A exportação escreve em fluxo para atender conjuntos maiores.
-
-A versão 0.2.1 reutiliza um consumidor de leitura por cluster selecionado e um worker permanente. Cada operação consulta novamente metadados e offsets; ao terminar ou cancelar, remove a atribuição anterior. Mudanças na conexão e nas credenciais recriam o cliente; **Conectar / atualizar todos** também força sua renovação. A primeira mensagem já chega formatada com os resultados. O cliente HTTP/TLS do Schema Registry só é criado quando necessário para Avro registrado.
-
-## Compilar no Windows
-
-Requisitos: Rust stable, Visual Studio C++ Build Tools, CMake, Strawberry Perl e NASM. As bibliotecas Kafka/TLS são compiladas e vinculadas ao aplicativo.
+Every release includes a SHA-256 checksum, the application licence, and third-party licence notices. To check the ZIP on Windows:
 
 ```powershell
-.\scripts\build-windows.ps1 -Command build
-.\target\debug\kafka-lens.exe
+Get-FileHash .\kafunekafka-v0.3.0-windows-x64.zip -Algorithm SHA256
 ```
 
-O script procura ferramentas instaladas no PATH e as cópias de desenvolvimento em `.tools`. Para otimização de produção:
+Compare the result with the matching `.sha256` asset. Cluster profiles and credentials are not included in the download.
+
+The Linux archive contains a native x64 executable built on Ubuntu 22.04 (glibc 2.35). Extract it and run `./kafunekafka/kafunekafka` from an X11/Wayland desktop with OpenGL available. It has been tested on Ubuntu 22.04 through WSL; other distributions have not been exercised.
+
+## What it does
+
+| Feature | Where |
+|---|---|
+| Multiple clusters, brokers, topics, partitions and consumer groups | Sidebar and Cluster |
+| Read messages and inspect keys, values, timestamps and headers | Messages |
+| Consumer committed offsets and lag | Consumers |
+| Pretty JSON, XML, Confluent Avro and Avro container files | Message format selector |
+| Save individual messages or raw values | Messages |
+| Import and export local message archives | Import / Export / Replay |
+| Replay to another topic or cluster | Import / Export / Replay |
+| Send a new message directly to a topic | Send / Resend |
+| Edit an existing message before resending it | Messages → Edit and resend |
+| Search topics and partitions with text or regex | Search |
+| Native desktop builds | Windows and Linux |
+
+The current interface is in Portuguese. Connection settings support PLAINTEXT, TLS, SASL/PLAIN and SCRAM, plus Schema Registry settings and local Avro schemas. Local validation has exercised PLAINTEXT and SASL/PLAIN; TLS/SCRAM and production clusters have not been exercised.
+
+## Message handling
+
+- Inspection uses explicit partition assignment, `read_committed`, and disabled auto-commit. It does not advance existing consumer-group offsets.
+- A read captures each partition's upper offset when it starts. Incoming traffic does not extend the snapshot indefinitely.
+- JSONL archives use `kafunekafka.record.v1`, preserving binary keys and values, nulls, empty bytes, repeated headers and timestamps.
+- Imports validate the archive and destination partitions before publishing. Replays preserve message bytes instead of converting the payload format.
+- Publishing waits for broker acknowledgements. Cancelling a transfer stops new submissions and drains pending deliveries.
+- Repeating an import or replay can publish the same messages again. Producer idempotence applies within a producer session.
+- The table retains at most 20,000 results and 128 MiB per read/search. Export streams larger selections to disk.
+
+Destination topics must already exist. Topic creation/deletion and consumer-offset resets are not exposed in this release.
+
+## Build from source
+
+The dependency versions are locked in `Cargo.lock`.
+
+### Windows
+
+Install Rust stable, Visual Studio C++ Build Tools, CMake, Strawberry Perl and NASM:
 
 ```powershell
 .\scripts\build-windows.ps1 -Command build -Release
+.\target\release\kafunekafka.exe
 ```
 
-## Compilar no Linux
+### Linux
 
-Em Ubuntu/Debian:
+On Ubuntu/Debian:
 
 ```bash
 sudo apt-get install build-essential pkg-config cmake libssl-dev \
   libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
   libxkbcommon-dev libxkbcommon-x11-dev libgtk-3-dev
-cargo build --locked
-./target/debug/kafka-lens
+cargo build --release --locked --bin kafunekafka
+./target/release/kafunekafka
 ```
 
-O renderer nativo usa OpenGL. Funciona com X11 ou Wayland. `cargo build --release --locked` gera a versão otimizada.
+The desktop renderer uses OpenGL with X11 or Wayland.
 
-## Testes reproduzíveis
+## Test
 
-O `compose.yaml` cria dois clusters Kafka reais e um Schema Registry, com portas limitadas ao loopback. O ambiente é exclusivamente de desenvolvimento; a senha SASL de teste está deliberadamente pública.
+Unit tests do not require a running broker:
+
+```bash
+cargo test --locked --lib
+cargo clippy --locked --all-targets -- -D warnings
+```
+
+For real Kafka tests, `compose.yaml` starts two local clusters and a Schema Registry. Its ports are bound to loopback, and its SASL password is deliberately a public development fixture:
 
 ```bash
 docker compose up -d
-cargo test --lib --locked
-cargo test --test kafka_end_to_end --locked -- --ignored --nocapture
-cargo test --test bulk_transfer --locked -- --ignored --nocapture
-cargo test --test read_session --locked -- --ignored --nocapture
+cargo test --locked --test kafka_end_to_end --test bulk_transfer --test read_session -- --ignored --nocapture
 ```
 
-O teste de integração cria tópicos com nomes únicos e registra evidências em `artifacts/integration-<sistema>.json`. Ele valida os requisitos 1–11 com Kafka real, incluindo bytes nulos/vazios/binários, headers repetidos, preservação de timestamps, Avro com registry, replay entre clusters, reenvio editado, SASL/PLAIN, cancelamento e rejeição de importação inválida antes de publicar. Os tópicos de fixture permanecem disponíveis para inspecionar a interface.
+The tests exercise the twelve original requirements, binary/null/header preservation, Schema Registry references, consumer offsets, cross-cluster replay, edited resend, cancellation and reused-reader recovery. They leave uniquely named fixture topics available for inspection.
+
+Native GUI smoke test:
 
 ```bash
-./target/debug/kafka-lens --smoke-ui artifacts/ui-linux.png
+./target/debug/kafunekafka --smoke-ui artifacts/ui-linux.png
 ```
 
-O modo de smoke abre a interface, conecta, carrega uma fixture real, formata uma mensagem, salva um screenshot e fecha a janela. Builds, testes e screenshots nas duas plataformas compõem a evidência do requisito 12.
-
-## Organização
-
-- `model.rs`: perfis e representação fiel das mensagens.
-- `backend.rs`: Kafka, limites de leitura, envio e transferências.
-- `codec.rs`: visualização e codificação Avro.
-- `storage.rs`: perfis, arquivo JSONL e gravação atômica.
-- `ui.rs`: interface nativa e tarefas em segundo plano.
-- `tests/kafka_end_to_end.rs`: validação com Kafka real.
-
-As funções de criar tópicos no backend atendem ao ambiente de teste; não existem ações destrutivas de gerenciamento na interface inicial.
+Use `KAFUNEKAFKA_CONFIG` to select an isolated profile JSON file. `KAFUNEKAFKA_TRACE=1` enables phase timings without logging credentials or payloads.
 
 ## Performance
 
-A versão 0.2 usa builds `release`, transferências em lote com memória limitada, exportação com buffer de 256 KiB, busca sem copiar mensagens rejeitadas e lista lateral virtualizada. A fila do consumidor tem limite configurado de 16 MiB; isso limita o prefetch e se soma às mensagens retidas pela tabela e às alocações do cliente. Mensagens individuais e respostas de fetch grandes podem ultrapassar esse tamanho.
+A permanent worker, reused readers, virtualized lists and bounded transfer queues keep work off the UI thread. Reads fetch fresh metadata and watermarks and remove their assignment when they finish or are cancelled.
 
-`scripts/benchmark.py` mede tempo, CPU e memória do processo em execuções repetidas e preserva as saídas. `scripts/compare_offset_linux.py` funciona em Windows e Linux e compara o CLI oficial do Offset Explorer com o backend usado pelo desktop. Os resultados completos, o conjunto de dados e as limitações ficam em `PERFORMANCE.md`.
+Historical Windows GUI measurements from 2026-10-14, before the branding change, reduced the median for 12,000 messages from **185.7 ms to 62.8 ms** across 45 reads per version. These are local results, not a guarantee for every cluster. See [Windows GUI measurements](PERFORMANCE-WINDOWS-GUI.md) and [CLI measurements](PERFORMANCE.md) for methods and limits; the CLI numbers include process startup and are not GUI latency measurements.
 
-O teste das interfaces reais no Windows está em `PERFORMANCE-WINDOWS-GUI.md`. `cargo build --release --bin kafkalens-ui-bench` e `scripts/benchmark_native_ui.py --same-window` exercitam a UI, o worker, a tabela e a formatação da mensagem selecionada. `scripts/benchmark_desktop.py --uss` separa memória exclusiva residente, residente total e privada comprometida. Os relógios dos dois aplicativos têm fronteiras diferentes.
-
-`scripts/compare_native_ui.py --baseline <runner anterior> --binary target/release/kafkalens-ui-bench.exe` alterna sessões das duas versões e conserva todas as leituras, inclusive os valores mais lentos. `KAFKALENS_TRACE=1` habilita tempos por etapa, sem registrar credenciais ou conteúdo das mensagens.
-
-O binário `kafkalens-bench` é uma ferramenta de desenvolvimento. Antes de executar `fixture`, escolha nomes novos: repetir a geração no mesmo tópico acrescenta mensagens. Os benchmarks não apagam tópicos. A medição deve ocorrer depois dos builds, com os mesmos dados, limites e opções nos dois programas.
-
-## Gerar e publicar o compilado Windows
-
-Após compilar com `cargo build --release --locked --bin kafka-lens`, execute:
+## Release packaging
 
 ```powershell
-python scripts/package_windows.py
+cargo build --release --locked --bin kafunekafka
+python scripts/package_windows.py --tag v0.3.0
 ```
 
-O pacote portátil e o checksum são gerados em `dist/`. O script localiza o runtime x64 do Visual Studio; se necessário, informe seu caminho com `--runtime-dll <vcruntime140.dll>`. Ele verifica os arquivos do ZIP e reúne as licenças a partir de `cargo metadata --locked`.
+This creates a portable ZIP and checksum in `dist/`, including the x64 MSVC runtime and dependency licences. The packaging script verifies every archived file.
 
-O workflow `.github/workflows/windows-release.yml` compila no Windows, executa formatação, clippy e testes unitários e prepara o ZIP. Para publicar a versão, atualize `Cargo.toml`, `Cargo.lock` e `RELEASE-NOTES.md` e envie a tag correspondente:
+For a Linux executable built on Linux, `python scripts/package_linux.py --tag v0.3.0` creates the corresponding archive and checksum.
 
-```powershell
-git tag v0.2.1
-git push origin v0.2.1
-```
+The [Windows release workflow](.github/workflows/windows-release.yml) checks formatting, clippy and unit tests, builds the executable and publishes tagged releases. Manual runs produce downloadable workflow artifacts. Real Kafka integration tests run separately against the local development stack.
 
-O workflow confere a tag contra a versão do Cargo antes de anexar o ZIP e o SHA-256 à release. Também pode ser executado manualmente em **Actions → Windows release** para gerar somente os artefatos. Os testes com Kafka real são executados separadamente com o ambiente Docker descrito acima.
+## Contributing and licence
 
-## Referências
+Issues and pull requests are welcome. For behavior changes, include focused validation; broker-dependent tests require the development stack above. Keep cluster profiles, passwords, private keys, build outputs and local benchmark data out of commits.
 
-[Documentação de importação do Offset Explorer](https://www.kafkatool.com/documentation/importtool.html), [documentação de exportação](https://www.kafkatool.com/documentation/exporttool.html), [rust-rdkafka](https://docs.rs/rdkafka/0.39.0/rdkafka/) e [eframe](https://docs.rs/eframe/0.33.3/eframe/). O formato de arquivo deste programa é próprio; não se anuncia compatibilidade com os diretórios binários do Offset Explorer.
+**Open source under the [MIT licence](LICENSE).** Third-party dependencies retain their own licences and are listed in release packages.

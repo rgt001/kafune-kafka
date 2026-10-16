@@ -1974,8 +1974,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "kafka-lens"
-version = "0.2.1"
+name = "kafunekafka"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "apache-avro",

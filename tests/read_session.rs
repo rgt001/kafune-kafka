@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kafka_lens::{
+use kafunekafka::{
     backend::{Backend, cancellation},
     model::*,
 };
@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 #[test]
 #[ignore = "Requires the two local Kafka clusters in compose.yaml"]
 fn rereads_refresh_bounds_and_recover_after_cancellation_and_errors() -> Result<()> {
-    let name = format!("kafkalens-session-{}", uuid::Uuid::new_v4().simple());
+    let name = format!("kafunekafka-session-{}", uuid::Uuid::new_v4().simple());
     let mut backend = Backend::new(ClusterProfile::default());
     backend.create_fixture_topic(&name, 3)?;
     let write = |backend: &Backend, partition, value: &[u8]| {

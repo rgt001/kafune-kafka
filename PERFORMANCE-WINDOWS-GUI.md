@@ -1,10 +1,14 @@
-# Interfaces no Windows — KafkaLens e Offset Explorer
+# Interfaces no Windows — kafunekafka e Offset Explorer
+
+Relatório histórico anterior à renomeação pública para `kafunekafka`. Os nomes de apresentação foram atualizados; os resultados e hashes foram preservados. Estes números não são uma nova medição da versão 0.3.0.
+
+Os caminhos de evidências citados abaixo se referem ao ambiente original de medição. Esses arquivos locais não acompanham esta release pública.
 
 Teste de 14/10/2026 com 12.000 mensagens do mesmo tópico local e três partições.
 
 ## Memória com as mensagens carregadas
 
-| Medida | KafkaLens 0.2.0 | Offset Explorer 4.0.5 |
+| Medida | kafunekafka 0.2.0 | Offset Explorer 4.0.5 |
 |---|---:|---:|
 | RAM exclusiva residente (USS) | 46.9 MiB | 416.6 MiB |
 | RAM residente total (RSS) | 291.6 MiB | 694.1 MiB |
@@ -14,16 +18,16 @@ Valores são medianas das amostras de um intervalo de aproximadamente 15 segundo
 
 USS mede memória residente exclusiva; RSS inclui também páginas compartilhadas e módulos mapeados. Memória privada comprometida inclui páginas que podem estar fora da RAM. As medidas têm significados diferentes, conforme a [documentação do psutil](https://psutil.io/api/#psutil.Process.memory_full_info). Foram usados psutil 7.2.2 e processos reais do Windows. Não se mediu VRAM.
 
-Depois das releituras, o KafkaLens ficou abaixo do Offset Explorer nas três medidas. Este é um recorte do estado observado, com históricos diferentes de uso e de coleta de lixo; não é um limite máximo garantido nem uma comparação entre processos recém-abertos. Em uma etapa anterior, o total residente do KafkaLens era maior que o do Offset Explorer. O mapa de memória do KafkaLens mostrou aproximadamente 141 MiB em dois módulos NVIDIA (`nvgpucomp64.dll` e `nvoglv64.dll`), além das demais alocações. Esse custo também faz parte da interface.
+Depois das releituras, o kafunekafka ficou abaixo do Offset Explorer nas três medidas. Este é um recorte do estado observado, com históricos diferentes de uso e de coleta de lixo; não é um limite máximo garantido nem uma comparação entre processos recém-abertos. Em uma etapa anterior, o total residente do kafunekafka era maior que o do Offset Explorer. O mapa de memória do kafunekafka mostrou aproximadamente 141 MiB em dois módulos NVIDIA (`nvgpucomp64.dll` e `nvoglv64.dll`), além das demais alocações. Esse custo também faz parte da interface.
 
 ## Tempo de carregar os dados
 
-- **KafkaLens, cinco leituras na mesma janela:** mediana **201.8 ms**, média **340.8 ms**, intervalo **185.7–906.6 ms**. Houve uma leitura de aproximadamente 907 ms; ela foi mantida no cálculo.
+- **kafunekafka, cinco leituras na mesma janela:** mediana **201.8 ms**, média **340.8 ms**, intervalo **185.7–906.6 ms**. Houve uma leitura de aproximadamente 907 ms; ela foi mantida no cálculo.
 - **Offset Explorer:** média de **180 ms informada pelo usuário**, lendo o indicador da interface após a solicitação de cinco releituras. Os cinco valores individuais não foram registrados.
 
 O nosso relógio vai do disparo da leitura ao recebimento dos registros, formatação JSON da mensagem selecionada e montagem do layout da tabela. Exclui a conexão inicial e a inicialização do processo. O segundo relógio do teste captura o framebuffer renderizado e inclui o custo de readback do screenshot. O relógio do Offset Explorer tem fronteiras definidas pelo próprio programa. Portanto, os números não constituem uma medição idêntica de clique até a apresentação na tela.
 
-**Este teste não comprova superioridade de latência do KafkaLens na GUI Windows.** As observações favorecem o consumo de memória do KafkaLens no estado testado. Os ganhos de 14–17 vezes medidos nos CLIs não se aplicam à interface já aberta.
+**Este teste não comprova superioridade de latência do kafunekafka na GUI Windows.** As observações favorecem o consumo de memória do kafunekafka no estado testado. Os ganhos de 14–17 vezes medidos nos CLIs não se aplicam à interface já aberta.
 
 ## Evidências e reprodução
 
@@ -32,8 +36,8 @@ As duas capturas enviadas pelo usuário confirmam 12.000 mensagens no mesmo tóp
 `gui-windows-comparison.json` conserva a comparação; `desktop-windows-*-final-*.json` conserva cada amostra de memória; `native-ui-windows-lens-same-window.json` conserva as leituras e os limites dos relógios. Amostras anteriores foram preservadas e não foram usadas na tabela acima.
 
 ```powershell
-cargo build --release --locked --bin kafkalens-ui-bench
-python scripts/benchmark_native_ui.py --binary target/release/kafkalens-ui-bench.exe --same-window
+cargo build --release --locked --bin kafunekafka-ui-bench
+python scripts/benchmark_native_ui.py --binary target/release/kafunekafka-ui-bench.exe --same-window
 python scripts/benchmark_desktop.py --pid <PID> --seconds 15 --uss --label <estado>
 python scripts/summarize_windows_gui.py
 ```
@@ -62,5 +66,5 @@ Nove testes unitários e clippy passaram no Windows e no Linux. A validação re
 Evidências: `artifacts/performance/gui-windows-optimization.json`, `gui-ab-*-same-window.json`, `raw/gui-*.stdout` e `raw/gui-*.stderr`. Reprodução:
 
 ```powershell
-python scripts/compare_native_ui.py --baseline <runner-0.2.0> --binary target/release/kafkalens-ui-bench.exe
+python scripts/compare_native_ui.py --baseline <runner-0.2.0> --binary target/release/kafunekafka-ui-bench.exe
 ```

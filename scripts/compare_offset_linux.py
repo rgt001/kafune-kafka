@@ -13,8 +13,8 @@ from benchmark import ROOT, measure
 
 PLATFORM = "windows" if sys.platform == "win32" else "linux"
 OFFSET = ROOT/".tools/offset-explorer/app/commandline.exe" if PLATFORM == "windows" else Path.home()/".local/opt/offset-explorer-bench/commandline"
-LENS = ROOT/"target/release/kafkalens-bench.exe" if PLATFORM == "windows" else Path.home()/".cache/kafkalens-target/release/kafkalens-bench"
-TOPIC = "kafkalens-perf-balanced-20261014-source"
+LENS = ROOT/"target/release/kafunekafka-bench.exe" if PLATFORM == "windows" else Path.home()/".cache/kafunekafka-target/release/kafunekafka-bench"
+TOPIC = "kafunekafka-perf-balanced-20261014-source"
 COUNT = 12000
 
 
@@ -30,9 +30,9 @@ def main():
     args=parser.parse_args()
     rows=[]
     for operation in ["view","search-view"]:
-        offset=[OFFSET,"-viewMessages","-serverConnection","kafkalens-perf","-topic",TOPIC,"-first",str(COUNT//3),"-keyFormat","text","-valueFormat","text","-format","#partition#:#offset# #key# #value#"]
+        offset=[OFFSET,"-viewMessages","-serverConnection","kafunekafka-perf","-topic",TOPIC,"-first",str(COUNT//3),"-keyFormat","text","-valueFormat","text","-format","#partition#:#offset# #key# #value#"]
         if operation == "search-view": offset += ["-valueFilterRegex",".*target.*"]
-        commands={"offset-explorer-4.0.5":offset,"kafkalens-0.2.0":[LENS,operation,TOPIC,str(COUNT)]}
+        commands={"offset-explorer-4.0.5":offset,"kafunekafka-0.2.0":[LENS,operation,TOPIC,str(COUNT)]}
         for index in range(-1,args.trials):
             checks={}
             for product in (list(commands) if index%2==0 else list(reversed(commands))):

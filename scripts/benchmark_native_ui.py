@@ -12,15 +12,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--trials", type=int, default=5)
-    parser.add_argument("--topic", default="kafkalens-perf-balanced-20261014-source")
+    parser.add_argument("--topic", default="kafunekafka-perf-balanced-20261014-source")
     parser.add_argument("--count", type=int, default=12000)
     parser.add_argument("--same-window", action="store_true")
-    parser.add_argument("--label", default="native-ui-windows-lens")
+    parser.add_argument("--label", default="native-ui-windows-kafunekafka")
     args = parser.parse_args()
-    os.environ["KAFKALENS_CONFIG"] = str(ROOT / ".tools/perf-gui-profiles.json")
-    os.environ["KAFKALENS_SMOKE_TOPIC"] = args.topic
-    os.environ["KAFKALENS_SMOKE_LIMIT"] = str(args.count)
-    os.environ["KAFKALENS_SMOKE_REPEATS"] = str(args.trials + 1 if args.same_window else 1)
+    os.environ["KAFUNEKAFKA_CONFIG"] = str(ROOT / ".tools/perf-gui-profiles.json")
+    os.environ["KAFUNEKAFKA_SMOKE_TOPIC"] = args.topic
+    os.environ["KAFUNEKAFKA_SMOKE_LIMIT"] = str(args.count)
+    os.environ["KAFUNEKAFKA_SMOKE_REPEATS"] = str(args.trials + 1 if args.same_window else 1)
     samples = []
     for index in ([-1] if args.same_window else range(-1, args.trials)):
         tag = f"{args.label}-{'same-' if args.same_window else ''}{index}"

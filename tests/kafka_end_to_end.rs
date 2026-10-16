@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kafka_lens::{
+use kafunekafka::{
     backend::{Backend, cancellation},
     codec::{Decoder, DisplayFormat},
     model::*,
@@ -15,10 +15,10 @@ use std::{sync::atomic::Ordering, time::Duration};
 #[ignore = "Requires the two Kafka clusters and Schema Registry in compose.yaml"]
 fn all_twelve_requirements_against_real_kafka() -> Result<()> {
     let suffix = &uuid::Uuid::new_v4().simple().to_string()[..8];
-    let source = format!("kafkalens-it-source-{suffix}");
-    let imported = format!("kafkalens-it-import-{suffix}");
-    let replayed = format!("kafkalens-it-replay-{suffix}");
-    let remote = format!("kafkalens-it-remote-{suffix}");
+    let source = format!("kafunekafka-it-source-{suffix}");
+    let imported = format!("kafunekafka-it-import-{suffix}");
+    let replayed = format!("kafunekafka-it-replay-{suffix}");
+    let remote = format!("kafunekafka-it-remote-{suffix}");
     let p = ClusterProfile::default();
     let backend = Backend::new(p.clone());
     let secondary = Backend::new(ClusterProfile {
@@ -33,7 +33,7 @@ fn all_twelve_requirements_against_real_kafka() -> Result<()> {
     let schema = r#"{"type":"record","name":"Purchase","fields":[{"name":"customer","type":"string"},{"name":"total","type":"long"}]}"#;
     let response: serde_json::Value = reqwest::blocking::Client::new()
         .post(format!(
-            "{}/subjects/kafkalens-test-{suffix}/versions",
+            "{}/subjects/kafunekafka-test-{suffix}/versions",
             p.registry_url
         ))
         .json(&serde_json::json!({"schema":schema}))
@@ -55,7 +55,7 @@ fn all_twelve_requirements_against_real_kafka() -> Result<()> {
     let buyer_schema = r#"{"type":"record","name":"Buyer","namespace":"test","fields":[{"name":"name","type":"string"}]}"#;
     let invoice_schema = r#"{"type":"record","name":"Invoice","namespace":"test","fields":[{"name":"buyer","type":"test.Buyer"}]}"#;
     let http = reqwest::blocking::Client::new();
-    let buyer_subject = format!("kafkalens-buyer-{suffix}");
+    let buyer_subject = format!("kafunekafka-buyer-{suffix}");
     http.post(format!(
         "{}/subjects/{buyer_subject}/versions",
         p.registry_url
@@ -63,13 +63,13 @@ fn all_twelve_requirements_against_real_kafka() -> Result<()> {
     .json(&serde_json::json!({"schema":buyer_schema}))
     .send()?
     .error_for_status()?;
-    let invoice:serde_json::Value=http.post(format!("{}/subjects/kafkalens-invoice-{suffix}/versions",p.registry_url)).json(&serde_json::json!({"schema":invoice_schema,"references":[{"name":"test.Buyer","subject":buyer_subject,"version":1}]})).send()?.error_for_status()?.json()?;
+    let invoice:serde_json::Value=http.post(format!("{}/subjects/kafunekafka-invoice-{suffix}/versions",p.registry_url)).json(&serde_json::json!({"schema":invoice_schema,"references":[{"name":"test.Buyer","subject":buyer_subject,"version":1}]})).send()?.error_for_status()?.json()?;
     let reference_payload = decoder.encode_avro(
         r#"{"buyer":{"name":"Bia"}}"#,
         "",
         Some(invoice["id"].as_u64().unwrap() as u32),
     )?;
-    let reference_topic = format!("kafkalens-it-references-{suffix}");
+    let reference_topic = format!("kafunekafka-it-references-{suffix}");
     backend.create_fixture_topic(&reference_topic, 1)?;
     backend.send(&ProduceRecord {
         topic: reference_topic.clone(),
@@ -164,7 +164,7 @@ fn all_twelve_requirements_against_real_kafka() -> Result<()> {
         assert_eq!(partition, r.partition.unwrap());
         assert!(offset >= 0);
     }
-    let group = format!("kafkalens-it-group-{suffix}");
+    let group = format!("kafunekafka-it-group-{suffix}");
     let mut config = backend.config()?;
     config
         .set("group.id", &group)
@@ -393,7 +393,8 @@ fn all_twelve_requirements_against_real_kafka() -> Result<()> {
     let auth = Backend::new(ClusterProfile {
         bootstrap_servers: "localhost:19093".into(),
         security_protocol: "SASL_PLAINTEXT".into(),
-        username: "kafkalens".into(),
+        username: std::env::var("KAFUNEKAFKA_TEST_SASL_USERNAME")
+            .unwrap_or_else(|_| "kafunekafka".into()),
         password: "local-test-only".into(),
         ..Default::default()
     });

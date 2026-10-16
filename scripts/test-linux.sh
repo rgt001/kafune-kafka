@@ -5,4 +5,4 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-8}"
 cargo test --locked --lib
 cargo test --locked --test kafka_end_to_end -- --ignored --nocapture
 cargo build --locked
-./target/debug/kafka-lens --smoke-ui artifacts/ui-linux.png
+./target/debug/kafunekafka --smoke-ui artifacts/ui-linux.png

@@ -25,7 +25,8 @@ def runtime_dlls(explicit):
                                                 "-property", "installationPath"], text=True).strip()
         if not installation:
             raise RuntimeError("MSVC not found; pass --runtime-dll with the x64 vcruntime140.dll path")
-        paths = sorted((Path(installation) / "VC/Redist/MSVC").glob("*/x64/Microsoft.VC*.CRT/vcruntime140.dll"),
+        paths = sorted((p for p in (Path(installation) / "VC/Redist/MSVC").glob("*/x64/Microsoft.VC*.CRT/vcruntime140.dll")
+                        if all(n.isdigit() for n in p.parents[2].name.split("."))),
                        key=lambda p: tuple(int(n) for n in p.parents[2].name.split(".")))
         if not paths:
             raise RuntimeError("MSVC x64 runtime not found; pass --runtime-dll")
@@ -47,7 +48,7 @@ def require_x64_pe(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--binary", type=Path, default=ROOT / "target/release/kafka-lens.exe")
+    parser.add_argument("--binary", type=Path, default=ROOT / "target/release/kafunekafka.exe")
     parser.add_argument("--runtime-dll", type=Path)
     parser.add_argument("--metadata", type=Path, help="Existing cargo metadata JSON, otherwise generated with --locked")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "dist")
@@ -63,18 +64,19 @@ def main():
     metadata = json.loads(args.metadata.read_text(encoding="utf-8-sig")) if args.metadata else json.loads(
         subprocess.check_output(["cargo", "metadata", "--locked", "--format-version", "1"], cwd=ROOT))
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    destination = args.output_dir / f"KafkaLens-v{version}-windows-x64.zip"
-    with tempfile.TemporaryDirectory(prefix="kafkalens-release-") as temporary:
+    destination = args.output_dir / f"kafunekafka-v{version}-windows-x64.zip"
+    with tempfile.TemporaryDirectory(prefix="kafunekafka-release-") as temporary:
         folder = Path(temporary)
-        shutil.copy2(args.binary, folder / "KafkaLens.exe")
+        shutil.copy2(args.binary, folder / "kafunekafka.exe")
         for dll in dlls:
             shutil.copy2(dll, folder / dll.name)
-        for name in ["README.md", "LICENSE", "PERFORMANCE.md", "PERFORMANCE-WINDOWS-GUI.md"]:
+        for name in ["README.md", "README.pt-BR.md", "RELEASE-NOTES.md", "LICENSE", "PERFORMANCE.md", "PERFORMANCE-WINDOWS-GUI.md"]:
             shutil.copy2(ROOT / name, folder / name)
+        shutil.copytree(ROOT / "assets", folder / "assets")
         collect_licenses(ROOT, folder, metadata)
-        manifest = {"application": "KafkaLens", "version": version, "platform": "windows-x64",
+        manifest = {"application": "kafunekafka", "version": version, "platform": "windows-x64",
                     "packaged_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                    "binary_sha256": sha256(folder / "KafkaLens.exe"),
+                    "binary_sha256": sha256(folder / "kafunekafka.exe"),
                     "files": [{"name": p.name, "sha256": sha256(p)} for p in folder.iterdir() if p.suffix in {".exe", ".dll"}],
                     "contents": "Portable executable, MSVC runtime, documentation and dependency licences. No cluster profiles or local benchmark data."}
         (folder / "release-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

@@ -19,7 +19,7 @@ def main():
     args = parser.parse_args()
     assert 1 <= args.trials <= 9 and args.batches > 0
     env = os.environ.copy()
-    env.pop("KAFKALENS_TRACE", None)
+    env.pop("KAFUNEKAFKA_TRACE", None)
     runs = {"baseline": [], "optimized": []}
     for batch in range(args.batches):
         order = ["baseline", "optimized"] if batch % 2 == 0 else ["optimized", "baseline"]
@@ -45,7 +45,7 @@ def main():
             # Resources belong to an entire GUI process, not to each read.
             values = [batch["samples"][0][metric] for batch in batches]
             summary[name][metric] = {"median": statistics.median(values), "min": min(values), "max": max(values)}
-    result = {"platform": "windows", "topic": "kafkalens-perf-balanced-20261014-source", "count": 12000,
+    result = {"platform": "windows", "topic": "kafunekafka-perf-balanced-20261014-source", "count": 12000,
               "baseline_sha256": hashlib.sha256(args.baseline.read_bytes()).hexdigest(),
               "optimized_sha256": hashlib.sha256(args.binary.read_bytes()).hexdigest(),
               "runs": runs, "summary": summary,

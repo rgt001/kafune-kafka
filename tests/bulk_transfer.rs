@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kafka_lens::{
+use kafunekafka::{
     backend::{Backend, cancellation},
     model::*,
     storage,
@@ -10,10 +10,10 @@ use std::sync::atomic::Ordering;
 #[ignore = "Requires Kafka in compose.yaml"]
 fn bounded_bulk_delivery_preserves_order_and_drains_on_cancel() -> Result<()> {
     let suffix = uuid::Uuid::new_v4().simple().to_string();
-    let source = format!("kafkalens-bulk-source-{suffix}");
-    let copied = format!("kafkalens-bulk-copy-{suffix}");
-    let cancelled = format!("kafkalens-bulk-cancel-{suffix}");
-    let rejected = format!("kafkalens-bulk-reject-{suffix}");
+    let source = format!("kafunekafka-bulk-source-{suffix}");
+    let copied = format!("kafunekafka-bulk-copy-{suffix}");
+    let cancelled = format!("kafunekafka-bulk-cancel-{suffix}");
+    let rejected = format!("kafunekafka-bulk-reject-{suffix}");
     let backend = Backend::new(ClusterProfile::default());
     for topic in [&source, &copied, &cancelled, &rejected] {
         backend.create_fixture_topic(topic, 3)?;
@@ -100,7 +100,7 @@ fn bounded_bulk_delivery_preserves_order_and_drains_on_cancel() -> Result<()> {
     )?;
     assert_eq!(report.delivered, records.len());
     verify(&copied, records.len())?;
-    let short = format!("kafkalens-bulk-short-{suffix}");
+    let short = format!("kafunekafka-bulk-short-{suffix}");
     backend.create_fixture_topic(&short, 1)?;
     let replay = ReplayOptions {
         destination_topic: short.clone(),

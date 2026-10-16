@@ -1,4 +1,4 @@
-name: kafkalens-dev
+name: kafunekafka-dev
 services:
   kafka:
     image: apache/kafka:4.1.0
@@ -20,7 +20,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
-      KAFKA_LISTENER_NAME_AUTH_PLAIN_SASL_JAAS_CONFIG: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="kafkalens" password="local-test-only" user_kafkalens="local-test-only";'
+      KAFKA_LISTENER_NAME_AUTH_PLAIN_SASL_JAAS_CONFIG: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="kafunekafka" password="local-test-only" user_kafunekafka="local-test-only";'
     healthcheck:
       test: [CMD-SHELL, "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 10s

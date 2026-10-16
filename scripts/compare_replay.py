@@ -15,11 +15,11 @@ def main():
     args = parser.parse_args()
     platform = "windows" if sys.platform == "win32" else "linux"
     offset = ROOT / ".tools/offset-explorer/app/commandline.exe" if platform == "windows" else Path.home() / ".local/opt/offset-explorer-bench/commandline"
-    lens = ROOT / "target/release/kafkalens-bench.exe" if platform == "windows" else Path.home() / ".cache/kafkalens-target/release/kafkalens-bench"
-    topic = "kafkalens-perf-balanced-20261014-source"
-    destination = "kafkalens-perf-balanced-20261014-destination"
+    lens = ROOT / "target/release/kafunekafka-bench.exe" if platform == "windows" else Path.home() / ".cache/kafunekafka-target/release/kafunekafka-bench"
+    topic = "kafunekafka-perf-balanced-20261014-source"
+    destination = "kafunekafka-perf-balanced-20261014-destination"
     commands = {"offset-explorer-4.0.5": [offset, "-exportMessages", args.offset_project],
-                "kafkalens-0.2.0": [lens, "replay", topic, "12000", "unused", destination]}
+                "kafunekafka-0.2.0": [lens, "replay", topic, "12000", "unused", destination]}
     rows = []
     for index in range(-1, args.trials):
         for product in (list(commands) if index % 2 == 0 else list(reversed(commands))):

@@ -29,7 +29,7 @@ struct ArchiveRecord {
 impl From<&KafkaRecord> for ArchiveRecord {
     fn from(r: &KafkaRecord) -> Self {
         Self {
-            format: "kafkalens.record.v1".into(),
+            format: "kafunekafka.record.v1".into(),
             topic: r.topic.clone(),
             partition: r.partition,
             offset: r.offset,
@@ -51,7 +51,7 @@ impl TryFrom<ArchiveRecord> for KafkaRecord {
     type Error = anyhow::Error;
     fn try_from(r: ArchiveRecord) -> Result<Self> {
         ensure!(
-            r.format == "kafkalens.record.v1",
+            r.format == "kafunekafka.record.v1",
             "Formato de arquivo desconhecido: {}",
             r.format
         );
@@ -202,7 +202,7 @@ pub fn save_raw(path: &Path, bytes: Option<&[u8]>) -> Result<()> {
 }
 
 pub fn profile_path() -> Result<PathBuf> {
-    let dirs = directories::ProjectDirs::from("dev", "KafkaLens", "KafkaLens")
+    let dirs = directories::ProjectDirs::from("dev", "kafunekafka", "kafunekafka")
         .context("Pasta de configuracao indisponivel")?;
     Ok(dirs.config_dir().join("clusters.json"))
 }

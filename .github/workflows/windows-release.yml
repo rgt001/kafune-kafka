@@ -48,7 +48,7 @@ jobs:
           cargo fmt --all -- --check
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked --lib
-          cargo build --release --locked --bin kafka-lens
+          cargo build --release --locked --bin kafunekafka
 
       - name: Package portable application
         run: |
@@ -61,7 +61,7 @@ jobs:
 
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: KafkaLens-windows-x64
+          name: kafunekafka-windows-x64
           path: |
             dist/*.zip
             dist/*.sha256
@@ -74,6 +74,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $existingDraft = gh release view $env:GITHUB_REF_NAME --json isDraft --jq .isDraft 2>$null
+          $exists = $LASTEXITCODE -eq 0
           $PSNativeCommandUseErrorActionPreference = $true
+          if ($exists) {
+            if ($existingDraft -eq 'true') {
+              throw 'A draft release already exists. Complete or remove it before publishing this tag again.'
+            }
+            Write-Output 'This release is already published; preserving its existing assets.'
+            exit 0
+          }
           $assets = @(Get-ChildItem -Path dist -File | ForEach-Object FullName)
-          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --title "KafkaLens $env:GITHUB_REF_NAME" --notes-file RELEASE-NOTES.md
+          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --title "kafunekafka $env:GITHUB_REF_NAME" --notes-file RELEASE-NOTES.md

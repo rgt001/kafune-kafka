@@ -1,17 +1,17 @@
 [package]
-name = "kafka-lens"
-version = "0.2.1"
+name = "kafunekafka"
+version = "0.3.0"
 edition = "2024"
-default-run = "kafka-lens"
+default-run = "kafunekafka"
 description = "Native Kafka desktop explorer for Windows and Linux"
 license = "MIT"
 
 [lib]
-name = "kafka_lens"
+name = "kafunekafka"
 path = "src/lib.rs"
 
 [[bin]]
-name = "kafka-lens"
+name = "kafunekafka"
 path = "src/main.rs"
 
 [dependencies]

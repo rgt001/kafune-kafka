@@ -1,21 +1,28 @@
-# KafkaLens 0.2.1
+# kafunekafka 0.3.0
 
-Aplicativo nativo em Rust para inspecionar Kafka no Windows e no Linux.
+First public open-source release, under the MIT licence.
 
-- Clusters, brokers, tópicos, partições e consumer groups.
-- Mensagens e offsets, com JSON, XML e Avro formatados.
-- Envio, reenvio com edição, busca por texto ou regex.
-- Importação/exportação de arquivos e replay entre tópicos e clusters.
-- Conexão e worker reutilizados para reduzir latência nas leituras.
+## Download for Windows
 
-## Windows x64
+Download **`kafunekafka-v0.3.0-windows-x64.zip`**, extract the entire ZIP and run **`kafunekafka.exe`**. Keep its DLLs alongside the executable. Rust, Java, Offset Explorer and Docker are not required to run the app.
 
-Baixe `KafkaLens-v0.2.1-windows-x64.zip`, extraia todo o conteúdo e execute `KafkaLens.exe`. Mantenha as DLLs junto do executável. Não é necessário instalar Rust, Java ou o Offset Explorer. Docker é usado apenas no ambiente de desenvolvimento e testes; para usar o aplicativo, basta ter acesso ao seu cluster Kafka.
+The matching `.sha256` asset lets you verify the download. Application and dependency licences are included. Local cluster profiles, credentials and development tools are excluded.
 
-O arquivo `.sha256` permite conferir o download com `Get-FileHash -Algorithm SHA256`. O ZIP contém as licenças das dependências. Os arquivos de conexão ficam no perfil local do usuário e não acompanham o pacote.
+**Linux x64:** `kafunekafka-v0.3.0-linux-x64.tar.gz` contains the native executable, built and tested on Ubuntu 22.04 through WSL (glibc 2.35). Extract it and run `./kafunekafka/kafunekafka` from an X11/Wayland desktop with OpenGL. Other distributions have not been exercised.
 
-## Validação desta versão
+## Included
 
-Em 14/10/2026: nove testes unitários, clippy e testes reais com dois clusters Kafka passaram no Windows e no Linux. Os testes cobrem os 12 requisitos e regressões de importação/replay, cancelamento e reutilização da conexão. TLS/SCRAM e clusters de produção não foram exercitados.
+- Clusters, brokers, topics, partitions and consumer groups.
+- Message inspection, consumer offsets, JSON/XML/Avro formatting.
+- Publishing, editable resend, text/regex search.
+- Import/export archives and replay across topics and clusters.
+- A permanent worker and reused readers to reduce read latency.
+- Native Windows and Linux builds; the current UI is in Portuguese.
 
-Na GUI Windows, 45 leituras de 12.000 mensagens por versão reduziram a mediana de 185,7 ms para 62,8 ms. O relatório `PERFORMANCE-WINDOWS-GUI.md` apresenta os resultados e os limites da comparação com o Offset Explorer.
+The package, executable, window, configuration directory, environment variables, archive identifier and development tools now use `kafunekafka`. Archives written by this version use `kafunekafka.record.v1`.
+
+## Validation
+
+Unit tests, clippy and real-Kafka integration are run on Windows and Linux before publication, including binary/null/header preservation, Avro Schema Registry references, consumer offsets, cross-cluster replay, cancellation and reused-reader recovery. PLAINTEXT and SASL/PLAIN are exercised locally; TLS/SCRAM and production clusters have not been exercised.
+
+Historical local GUI measurements from 2026-10-14, before the branding change, reduced the median for 12,000 messages from 185.7 ms to 62.8 ms across 45 reads per version. See `PERFORMANCE-WINDOWS-GUI.md` for methods and limits. These are earlier measurements, not a new performance benchmark of this release.

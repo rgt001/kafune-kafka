@@ -36,7 +36,7 @@ def collect_licenses(root, artifacts, metadata):
     rows = ['# Dependencias e licencas', '', 'Inventario do Cargo.lock. Algumas dependencias sao usadas apenas em outras plataformas ou no build.', '', '| Pacote | Versao | Licenca declarada |', '|---|---|---|']
     inventory = []
     for package in sorted(metadata['packages'], key=lambda p: (p['name'], p['version'])):
-        if package['name'] == 'kafka-lens':
+        if package['name'] == 'kafunekafka':
             continue
         rows.append(f"| {package['name']} | {package['version']} | {package.get('license') or 'Veja os arquivos do pacote'} |")
         package_root = Path(package['manifest_path']).parent
@@ -68,9 +68,9 @@ def main():
     windows.mkdir(exist_ok=True)
     linux.mkdir(exist_ok=True)
     version = tomllib.loads((root / 'Cargo.toml').read_text())['package']['version']
-    shutil.copy2(root / 'target/release/kafka-lens.exe', windows / 'KafkaLens.exe')
+    shutil.copy2(root / 'target/release/kafunekafka.exe', windows / 'kafunekafka.exe')
     shutil.copy2(args.runtime_dll, windows / 'vcruntime140.dll')
-    shutil.copy2(args.linux_binary, linux / 'kafka-lens')
+    shutil.copy2(args.linux_binary, linux / 'kafunekafka')
     for platform in [windows, linux]:
         shutil.copy2(root / 'README.md', platform / 'README.md')
         shutil.copy2(root / 'LICENSE', platform / 'LICENSE')
@@ -85,9 +85,9 @@ def main():
         if report['status'] != 'passed':
             raise RuntimeError('Integration did not pass: ' + platform)
         integrations[platform] = report
-    binaries = [windows / 'KafkaLens.exe', windows / 'vcruntime140.dll', linux / 'kafka-lens']
+    binaries = [windows / 'kafunekafka.exe', windows / 'vcruntime140.dll', linux / 'kafunekafka']
     verification = {
-        'application': 'KafkaLens', 'version': version, 'build_profile': 'release',
+        'application': 'kafunekafka', 'version': version, 'build_profile': 'release',
         'tested_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'all_12_requirements': 'passed in the local Kafka test environment',
         'unit_tests_per_platform': 9, 'clippy_windows_linux': 'passed with -D warnings',
@@ -104,24 +104,24 @@ def main():
     for directory, subdirectories, filenames in os.walk(root):
         subdirectories[:]=[name for name in subdirectories if name not in {'target','.tools','artifacts','dist','.git','__pycache__'}]
         source_files.extend(Path(directory)/name for name in filenames if not name.endswith(('.log','.partial','.pyc','.pem','.key','.pfx','.p12')) and not name.startswith('.env') and name != 'clusters.json')
-    zip_checked(artifacts / f'KafkaLens-v{version}-source.zip', [(p, 'KafkaLens/' + p.relative_to(root).as_posix()) for p in source_files])
+    zip_checked(artifacts / f'kafunekafka-v{version}-source.zip', [(p, 'kafunekafka/' + p.relative_to(root).as_posix()) for p in source_files])
     common = [(artifacts / name, name) for name in ['THIRD-PARTY-NOTICES.md', 'dependency-inventory.json', 'verification.json']]
     common.extend((artifacts / name, 'evidence/' + name) for platform in ['windows', 'linux'] for name in [f'integration-{platform}.json', f'bulk-{platform}.json', f'ui-{platform}.png'])
     common.extend((p, 'performance/' + p.name) for p in (artifacts / 'performance').glob('*.json'))
     common.extend((p, 'performance/' + p.name) for p in (artifacts / 'performance').glob('*.png'))
     common.extend((p, p.relative_to(artifacts).as_posix()) for p in licences.rglob('*') if p.is_file())
-    zip_checked(artifacts / f'KafkaLens-v{version}-windows-x64.zip', [(p, p.name) for p in windows.iterdir() if p.is_file()] + common)
-    linux_tar = artifacts / f'KafkaLens-v{version}-linux-x64.tar.gz'
+    zip_checked(artifacts / f'kafunekafka-v{version}-windows-x64.zip', [(p, p.name) for p in windows.iterdir() if p.is_file()] + common)
+    linux_tar = artifacts / f'kafunekafka-v{version}-linux-x64.tar.gz'
     with tarfile.open(linux_tar, 'w:gz') as archive:
         for path, name in [(p, p.name) for p in linux.iterdir() if p.is_file()] + common:
-            info = archive.gettarinfo(str(path), 'KafkaLens/' + name)
-            if path.name == 'kafka-lens':
+            info = archive.gettarinfo(str(path), 'kafunekafka/' + name)
+            if path.name == 'kafunekafka':
                 info.mode = 0o755
             with path.open('rb') as stream:
                 archive.addfile(info, stream)
     with tarfile.open(linux_tar) as archive:
-        with archive.extractfile('KafkaLens/kafka-lens') as stream:
-            if hashlib.file_digest(stream, 'sha256').hexdigest() != sha256(linux / 'kafka-lens'):
+        with archive.extractfile('kafunekafka/kafunekafka') as stream:
+            if hashlib.file_digest(stream, 'sha256').hexdigest() != sha256(linux / 'kafunekafka'):
                 raise RuntimeError('Linux archive mismatch')
     linux_tar.with_suffix('.gz.sha256').write_text(sha256(linux_tar) + '  ' + linux_tar.name + '\n')
     print(json.dumps({'status': 'passed', 'artifacts': str(artifacts), 'source_files': len(source_files), 'platforms': ['windows', 'linux']}, indent=2))

@@ -1,6 +1,6 @@
 //! Reproducible benchmark driver. Operations use the same Backend as the desktop UI.
 use anyhow::{Context, Result, ensure};
-use kafka_lens::{
+use kafunekafka::{
     backend::{Backend, cancellation},
     model::*,
     storage,
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     let topic = args
         .get(2)
         .cloned()
-        .unwrap_or_else(|| "kafkalens-perf-source".into());
+        .unwrap_or_else(|| "kafunekafka-perf-source".into());
     let count: usize = args
         .get(3)
         .map(|s| s.parse())
@@ -30,9 +30,9 @@ fn main() -> Result<()> {
     let destination = args
         .get(5)
         .map(String::as_str)
-        .unwrap_or("kafkalens-perf-destination");
+        .unwrap_or("kafunekafka-perf-destination");
     let profile = ClusterProfile {
-        bootstrap_servers: std::env::var("KAFKALENS_BROKERS")
+        bootstrap_servers: std::env::var("KAFUNEKAFKA_BROKERS")
             .unwrap_or_else(|_| "localhost:19092".into()),
         ..Default::default()
     };

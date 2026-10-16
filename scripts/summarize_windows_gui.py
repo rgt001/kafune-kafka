@@ -12,35 +12,35 @@ def main():
         return json.loads((DATA / (name + ".json")).read_text())
     timing = load("native-ui-windows-lens-same-window")
     previous = load("gui-windows-comparison") if (DATA / "gui-windows-comparison.json").exists() else {}
-    memory = {"kafkalens": load("desktop-windows-lens-final-0"),
+    memory = {"kafunekafka": load("desktop-windows-lens-final-0"),
               "offset_explorer": load("desktop-windows-offset-final-1")}
     result = {"platform": "windows", "date": "2026-10-14", "count": 12000,
-              "topic": "kafkalens-perf-balanced-20261014-source",
-              "kafkalens_timing": timing["summary"],
+              "topic": "kafunekafka-perf-balanced-20261014-source",
+              "kafunekafka_timing": timing["summary"],
               "offset_explorer_timing": {"mean_seconds_reported_by_user": .180,
                                          "requested_repetitions": 5, "individual_samples": None,
                                          "source": "User read the GUI status bar and reported media de 180ms after the five-read request."},
               "memory": {product: {k: row[k] for k in ["pid", "executable", "duration_seconds", "median_rss_bytes_sampled", "median_uss_bytes_sampled", "median_private_bytes_sampled", "cpu_seconds_sampled"]} for product, row in memory.items()},
-              "method": "Two real Windows desktop processes, same topic and 12000 retained records, user-operated loading verified by supplied screenshots. Memory sampled at 100ms in an idle 15s interval per process after reloads. Native KafkaLens test runner performs five reads in one window after discarded warmup using the production UI/worker.",
-              "limits": "OE timer boundaries are defined by that application; human reported a mean without individual samples. KafkaLens timer includes dispatch, read, selected JSON formatting and table layout. No matched click-to-present latency benchmark. Process histories, foreground/background state and viewport sizes differ. USS/RSS depend on OS paging; Java garbage collection affects retained memory. No GPU memory measurement.",
+              "method": "Two real Windows desktop processes, same topic and 12000 retained records, user-operated loading verified by supplied screenshots. Memory sampled at 100ms in an idle 15s interval per process after reloads. Native kafunekafka test runner performs five reads in one window after discarded warmup using the production UI/worker.",
+              "limits": "OE timer boundaries are defined by that application; human reported a mean without individual samples. kafunekafka timer includes dispatch, read, selected JSON formatting and table layout. No matched click-to-present latency benchmark. Process histories, foreground/background state and viewport sizes differ. USS/RSS depend on OS paging; Java garbage collection affects retained memory. No GPU memory measurement.",
               "measured_version": "0.2.0",
-              "production_windows_binary_sha256": previous.get("production_windows_binary_sha256") or hashlib.sha256((ROOT / "target/release/kafka-lens.exe").read_bytes()).hexdigest(),
+              "production_windows_binary_sha256": previous.get("production_windows_binary_sha256") or hashlib.sha256((ROOT / "target/release/kafunekafka.exe").read_bytes()).hexdigest(),
               "test_runner_sha256": timing["binary_sha256"]}
     (DATA / "gui-windows-comparison.json").write_text(json.dumps(result, indent=2))
     rows = []
     for label, field in [("RAM exclusiva residente (USS)", "median_uss_bytes_sampled"),
                          ("RAM residente total (RSS)", "median_rss_bytes_sampled"),
                          ("Memória privada comprometida", "median_private_bytes_sampled")]:
-        values = [result["memory"][p][field] / 2**20 for p in ["kafkalens", "offset_explorer"]]
+        values = [result["memory"][p][field] / 2**20 for p in ["kafunekafka", "offset_explorer"]]
         rows.append(f"| {label} | {values[0]:.1f} MiB | {values[1]:.1f} MiB |")
     data_ready = timing["summary"]["data_ready"]
-    report = f'''# Interfaces no Windows — KafkaLens e Offset Explorer
+    report = f'''# Interfaces no Windows — kafunekafka e Offset Explorer
 
 Teste de 14/10/2026 com 12.000 mensagens do mesmo tópico local e três partições.
 
 ## Memória com as mensagens carregadas
 
-| Medida | KafkaLens 0.2.0 | Offset Explorer 4.0.5 |
+| Medida | kafunekafka 0.2.0 | Offset Explorer 4.0.5 |
 |---|---:|---:|
 {chr(10).join(rows)}
 
@@ -48,16 +48,16 @@ Valores são medianas das amostras de um intervalo de aproximadamente 15 segundo
 
 USS mede memória residente exclusiva; RSS inclui também páginas compartilhadas e módulos mapeados. Memória privada comprometida inclui páginas que podem estar fora da RAM. As medidas têm significados diferentes, conforme a [documentação do psutil](https://psutil.io/api/#psutil.Process.memory_full_info). Foram usados psutil 7.2.2 e processos reais do Windows. Não se mediu VRAM.
 
-Depois das releituras, o KafkaLens ficou abaixo do Offset Explorer nas três medidas. Este é um recorte do estado observado, com históricos diferentes de uso e de coleta de lixo; não é um limite máximo garantido nem uma comparação entre processos recém-abertos. Em uma etapa anterior, o total residente do KafkaLens era maior que o do Offset Explorer. O mapa de memória do KafkaLens mostrou aproximadamente 141 MiB em dois módulos NVIDIA (`nvgpucomp64.dll` e `nvoglv64.dll`), além das demais alocações. Esse custo também faz parte da interface.
+Depois das releituras, o kafunekafka ficou abaixo do Offset Explorer nas três medidas. Este é um recorte do estado observado, com históricos diferentes de uso e de coleta de lixo; não é um limite máximo garantido nem uma comparação entre processos recém-abertos. Em uma etapa anterior, o total residente do kafunekafka era maior que o do Offset Explorer. O mapa de memória do kafunekafka mostrou aproximadamente 141 MiB em dois módulos NVIDIA (`nvgpucomp64.dll` e `nvoglv64.dll`), além das demais alocações. Esse custo também faz parte da interface.
 
 ## Tempo de carregar os dados
 
-- **KafkaLens, cinco leituras na mesma janela:** mediana **{data_ready['median']*1000:.1f} ms**, média **{data_ready['mean']*1000:.1f} ms**, intervalo **{data_ready['min']*1000:.1f}–{data_ready['max']*1000:.1f} ms**. Houve uma leitura de aproximadamente 907 ms; ela foi mantida no cálculo.
+- **kafunekafka, cinco leituras na mesma janela:** mediana **{data_ready['median']*1000:.1f} ms**, média **{data_ready['mean']*1000:.1f} ms**, intervalo **{data_ready['min']*1000:.1f}–{data_ready['max']*1000:.1f} ms**. Houve uma leitura de aproximadamente 907 ms; ela foi mantida no cálculo.
 - **Offset Explorer:** média de **180 ms informada pelo usuário**, lendo o indicador da interface após a solicitação de cinco releituras. Os cinco valores individuais não foram registrados.
 
 O nosso relógio vai do disparo da leitura ao recebimento dos registros, formatação JSON da mensagem selecionada e montagem do layout da tabela. Exclui a conexão inicial e a inicialização do processo. O segundo relógio do teste captura o framebuffer renderizado e inclui o custo de readback do screenshot. O relógio do Offset Explorer tem fronteiras definidas pelo próprio programa. Portanto, os números não constituem uma medição idêntica de clique até a apresentação na tela.
 
-**Este teste não comprova superioridade de latência do KafkaLens na GUI Windows.** As observações favorecem o consumo de memória do KafkaLens no estado testado. Os ganhos de 14–17 vezes medidos nos CLIs não se aplicam à interface já aberta.
+**Este teste não comprova superioridade de latência do kafunekafka na GUI Windows.** As observações favorecem o consumo de memória do kafunekafka no estado testado. Os ganhos de 14–17 vezes medidos nos CLIs não se aplicam à interface já aberta.
 
 ## Evidências e reprodução
 
@@ -66,8 +66,8 @@ As duas capturas enviadas pelo usuário confirmam 12.000 mensagens no mesmo tóp
 `gui-windows-comparison.json` conserva a comparação; `desktop-windows-*-final-*.json` conserva cada amostra de memória; `native-ui-windows-lens-same-window.json` conserva as leituras e os limites dos relógios. Amostras anteriores foram preservadas e não foram usadas na tabela acima.
 
 ```powershell
-cargo build --release --locked --bin kafkalens-ui-bench
-python scripts/benchmark_native_ui.py --binary target/release/kafkalens-ui-bench.exe --same-window
+cargo build --release --locked --bin kafunekafka-ui-bench
+python scripts/benchmark_native_ui.py --binary target/release/kafunekafka-ui-bench.exe --same-window
 python scripts/benchmark_desktop.py --pid <PID> --seconds 15 --uss --label <estado>
 python scripts/summarize_windows_gui.py
 ```
@@ -104,7 +104,7 @@ Nove testes unitários e clippy passaram no Windows e no Linux. A validação re
 Evidências: `artifacts/performance/gui-windows-optimization.json`, `gui-ab-*-same-window.json`, `raw/gui-*.stdout` e `raw/gui-*.stderr`. Reprodução:
 
 ```powershell
-python scripts/compare_native_ui.py --baseline <runner-0.2.0> --binary target/release/kafkalens-ui-bench.exe
+python scripts/compare_native_ui.py --baseline <runner-0.2.0> --binary target/release/kafunekafka-ui-bench.exe
 ```
 '''
     (ROOT / "PERFORMANCE-WINDOWS-GUI.md").write_text(report, encoding="utf-8")

@@ -8,7 +8,7 @@ pub(crate) struct Trace {
 impl Trace {
     pub(crate) fn new(operation: &'static str) -> Self {
         Self {
-            started: std::env::var_os("KAFKALENS_TRACE").map(|_| Instant::now()),
+            started: std::env::var_os("KAFUNEKAFKA_TRACE").map(|_| Instant::now()),
             operation,
         }
     }

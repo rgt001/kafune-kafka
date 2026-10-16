@@ -1,5 +1,5 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
-use kafka_lens::ui::KafkaLensApp;
+use kafunekafka::ui::KafuneKafkaApp;
 fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
     let args: Vec<String> = std::env::args().collect();
@@ -17,8 +17,8 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "KafkaLens",
+        "kafunekafka",
         options,
-        Box::new(move |cc| Ok(Box::new(KafkaLensApp::new(cc, smoke)))),
+        Box::new(move |cc| Ok(Box::new(KafuneKafkaApp::new(cc, smoke)))),
     )
 }

@@ -1,5 +1,5 @@
 //! Native GUI runner for test evidence. Uses the production UI and worker path.
-use kafka_lens::ui::KafkaLensApp;
+use kafunekafka::ui::KafuneKafkaApp;
 fn main() -> eframe::Result {
     let output = std::env::args().nth(1).expect("screenshot output path");
     let options = eframe::NativeOptions {
@@ -10,8 +10,8 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "KafkaLens GUI benchmark",
+        "kafunekafka GUI benchmark",
         options,
-        Box::new(move |cc| Ok(Box::new(KafkaLensApp::new(cc, Some(output.into()))))),
+        Box::new(move |cc| Ok(Box::new(KafuneKafkaApp::new(cc, Some(output.into()))))),
     )
 }
