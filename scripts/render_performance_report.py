@@ -21,34 +21,34 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--linux-binary", type=Path, required=True)
     args = parser.parse_args()
-    lines = ["# kafunekafka 0.2.0 — medições de performance", "",
-             "Medições locais de 14/10/2026, contra o Offset Explorer 4.0.5. A versão otimizada apresenta vantagem em tempo e memória nos CLIs testados. A inicialização da JVM faz parte desses tempos; a vantagem não pode ser aplicada diretamente à interface já aberta.", "",
-             "## Ambiente e método", "",
-             "AMD Ryzen 7 5700G, 8 cores/16 threads, 32 GB de RAM; Windows 10 Pro 19045 e Ubuntu 22.04 no WSL2. Kafka 4.1.0 e Schema Registry 7.8.3 locais. kafunekafka compilado em `release`, LTO thin; Offset Explorer instalado pelos distribuidores oficiais, com Java 21. Compilações e testes de integração terminaram antes das medições finais.", "",
-             "Cada comparação de CLI usa uma execução de aquecimento descartada e cinco execuções medidas por produto, alternando a ordem. A tabela mostra a mediana e o intervalo mínimo–máximo em segundos. Os dois programas leem as mesmas 12.000 mensagens JSON (~940 bytes de valor), com chave, timestamp fixo e três partições de 4.000 mensagens. A busca regex retorna as mesmas 120 mensagens; o SHA-256 dos registros normalizados comprova igualdade do conteúdo em cada par de leitura/busca.", "",
-             "`psutil` amostra processo e filhos a cada 20 ms. Picos de RSS e CPU são estimativas por amostragem e podem omitir eventos entre amostras; CPU é tempo agregado das threads, não percentual. RSS de processos com páginas compartilhadas não equivale a consumo físico exclusivo. No Linux, stdout e arquivos JSONL ficam em `/mnt/d` (DrvFS); esse custo de filesystem participa do tempo total. O tempo completo inclui inicialização, conexão, processamento, saída e encerramento.", "",
-             "## CLIs — leitura e busca", "",
-             "| Plataforma / operação | kafunekafka s (min–max) | Offset Explorer s (min–max) | Razão OE/kafunekafka | RSS kafunekafka / OE MiB | CPU kafunekafka / OE s |",
+    lines = ["# kafunekafka 0.2.0 — performance measurements\n\nHistorical report from before the public rename to `kafunekafka`. Display names have been updated; results and hashes have been preserved. These figures are not new measurements of version 0.3.0.\n\nThe evidence paths below refer to the original measurement environment. Those local files are not included in this public release.", "",
+             "Local measurements from 2026-10-14, compared with Offset Explorer 4.0.5. The optimized version shows a time and memory advantage in the tested CLIs. JVM startup is included in these timings; the advantage cannot be applied directly to an already open interface.", "",
+             "## Environment and method", "",
+             "AMD Ryzen 7 5700G, 8 cores/16 threads, 32 GB of RAM; Windows 10 Pro 19045 and Ubuntu 22.04 on WSL2. Local Kafka 4.1.0 and Schema Registry 7.8.3. kafunekafka built in `release` mode with thin LTO; Offset Explorer installed from official distributions, with Java 21. Builds and integration tests finished before the final measurements.", "",
+             "Each CLI comparison uses one discarded warmup run and five measured runs per product, alternating their order. The table shows the median and minimum–maximum range in seconds. Both programs read the same 12,000 JSON messages (~940 value bytes), with keys, a fixed timestamp, and three partitions of 4,000 messages. The regex search returns the same 120 messages; SHA-256 hashes of normalized records confirm identical content in each read/search pair.", "",
+             "`psutil` samples the process and its children every 20 ms. Peak RSS and CPU values are sampling estimates and may miss events between samples; CPU is aggregate thread time, not a percentage. RSS for processes with shared pages does not equal unique physical memory usage. On Linux, stdout and JSONL files are on `/mnt/d` (DrvFS); that filesystem cost is included in total time. End-to-end time includes startup, connection, processing, output, and shutdown.", "",
+             "## CLIs — reading and searching", "",
+             "| Platform / operation | kafunekafka s (min–max) | Offset Explorer s (min–max) | OE/kafunekafka ratio | kafunekafka / OE RSS MiB | kafunekafka / OE CPU s |",
              "|---|---:|---:|---:|---:|---:|"]
     for platform in ["windows", "linux"]:
         data = load("comparison-" + platform)
         assert data["content_equal"]
-        for operation, name in [("view", "leitura + stdout"), ("search-view", "busca regex + stdout")]:
+        for operation, name in [("view", "read + stdout"), ("search-view", "regex search + stdout")]:
             a, b = (data["summary"][operation][p] for p in ["kafunekafka-0.2.0", "offset-explorer-4.0.5"])
             lines.append(f'| {platform} / {name} | {timing(a["wall_seconds"])} | {timing(b["wall_seconds"])} | {b["wall_seconds"]["median"]/a["wall_seconds"]["median"]:.1f}× | {a["peak_rss_bytes_sampled"]["median"]/2**20:.1f} / {b["peak_rss_bytes_sampled"]["median"]/2**20:.1f} | {a["cpu_seconds_sampled"]["median"]:.3f} / {b["cpu_seconds_sampled"]["median"]:.3f} |')
-    lines += ["", "O kafunekafka usa o mesmo `Backend` do desktop por meio de um driver de desenvolvimento. O outro lado usa o [CLI oficial do Offset Explorer](https://www.kafkatool.com/documentation/commandline.html). Isso compara duas execuções completas de CLI, incluindo seus runtimes. As condições são Kafka local, plaintext e JSON; TLS, Avro, latência WAN e clusters de produção não foram comparados em performance.", "",
-              "## CLIs — replay confirmado de 12.000 mensagens", "",
-              "| Plataforma | kafunekafka completo s (min–max) | Offset Explorer completo s (min–max) | RSS kafunekafka / OE MiB | Tempo informado kafunekafka / OE s |",
+    lines += ["", "kafunekafka uses the same `Backend` as the desktop app through a development driver. The other side uses the [official Offset Explorer CLI](https://www.kafkatool.com/documentation/commandline.html). This compares two complete CLI executions, including their runtimes. The conditions are local Kafka, plaintext, and JSON; TLS, Avro, WAN latency, and production clusters were not compared for performance.", "",
+              "## CLIs — acknowledged replay of 12,000 messages", "",
+              "| Platform | kafunekafka end-to-end s (min–max) | Offset Explorer end-to-end s (min–max) | kafunekafka / OE RSS MiB | kafunekafka / OE reported time s |",
               "|---|---:|---:|---:|---:|"]
     for platform in ["windows", "linux"]:
         data = load("replay-comparison-" + platform)
         assert all(r["delivered"] == 12000 for r in data["samples"])
         a, b = (data["summary"][p] for p in ["kafunekafka-0.2.0", "offset-explorer-4.0.5"])
         lines.append(f'| {platform} | {timing(a["wall_seconds"])} | {timing(b["wall_seconds"])} | {a["peak_rss_bytes_sampled"]["median"]/2**20:.1f} / {b["peak_rss_bytes_sampled"]["median"]/2**20:.1f} | {a["operation_seconds_reported"]["median"]:.3f} / {b["operation_seconds_reported"]["median"]:.3f} |')
-    lines += ["", "Os relógios informados pelos produtos têm fronteiras diferentes: o nosso inclui validação do destino e configuração do scan; o do Offset Explorer é definido por ele. São valores de diagnóstico. Em uma execução adicional com o Offset Explorer já aberto no X11, a interface informou **306 ms** para as mesmas 12.000 mensagens. O nosso backend no Linux ficou perto de 295 ms, mas esses números não estabelecem um vencedor de latência da GUI. A captura está em `.tools/evidence/offset-warm-replay-0.png`.", "",
-              "## Operações do kafunekafka", "",
-              "Cinco execuções por operação, aquecimento descartado, 10.000 mensagens na fixture original. Exportação usa JSONL com bytes em base64 e `fsync`; importação valida todo o arquivo antes de publicar e espera confirmações. O formato do Offset Explorer exporta arquivos individuais e não é equivalente ao nosso JSONL; não usamos esses formatos para anunciar uma vantagem direta de exportação/importação.", "",
-              "| Plataforma / operação | Tempo completo s (min–max) | RSS MiB |",
+    lines += ["", "The timers reported by the products have different boundaries: ours includes destination validation and scan setup; Offset Explorer defines its own. These are diagnostic values. In an additional run with Offset Explorer already open on X11, its interface reported **306 ms** for the same 12,000 messages. Our Linux backend took about 295 ms, but these figures do not establish a GUI latency winner. The capture is stored in `.tools/evidence/offset-warm-replay-0.png`.", "",
+              "## kafunekafka operations", "",
+              "Five runs per operation, with warmup discarded, using 10,000 messages in the original fixture. Export uses JSONL with base64 bytes and `fsync`; import validates the entire file before publishing and waits for acknowledgements. Offset Explorer's format exports individual files and is not equivalent to our JSONL; these formats are not used to claim a direct export/import advantage.", "",
+              "| Platform / operation | End-to-end time s (min–max) | RSS MiB |",
               "|---|---:|---:|"]
     for platform in ["windows", "linux"]:
         for operation, metrics in load("release-final-" + platform)["summary"].items():
@@ -57,47 +57,47 @@ def main():
     old_import = [s["backend"]["elapsed_seconds"] for s in baseline["samples"] if s["operation"] == "import"]
     current = load("release-final-windows")
     new_import = [s["backend"]["elapsed_seconds"] for s in current["samples"] if s["operation"] == "import" and not s["warmup"]]
-    lines += ["", f'A importação original confirmava uma mensagem por vez: os dois registros de 10.000 mensagens (aquecimento e primeira medição) têm mediana de tempo interno de **{statistics.median(old_import):.2f} s**. A versão final tem mediana interna de **{statistics.median(new_import):.3f} s**, em cinco medições. O número de repetições é diferente; não se trata de comparação controlada entre versões. O harness antigo também escrevia os 1.000 recibos em stderr em pequenas chamadas; esse custo foi removido do driver e não é apresentado como otimização do produto.', "",
-              "## Desktop e limites de memória", ""]
+    lines += ["", f'The original import acknowledged one message at a time: the two 10,000-message runs (warmup and first measurement) have a median internal time of **{statistics.median(old_import):.2f} s**. The final version has a median internal time of **{statistics.median(new_import):.3f} s**, across five measurements. The number of repetitions differs; this is not a controlled comparison between versions. The old harness also wrote the 1,000 receipts to stderr in small calls; that cost was removed from the driver and is not presented as a product optimization.', "",
+              "## Desktop and memory bounds", ""]
     for name in ["desktop-linux-lens-loaded", "desktop-linux-offset-loaded"]:
         path = DATA / (name + ".json")
         if path.exists():
             row = load(name)
-            lines.append(f'- `{name}`: pico RSS amostrado **{row["peak_rss_bytes_sampled"]/2**20:.1f} MiB**, CPU **{row["cpu_seconds_sampled"]:.3f} s** durante {row["duration_seconds"]:.1f} s em repouso após carregar 12.000 mensagens.')
-    windows_note = "A captura externa de janelas no Windows falhou; foi realizado depois um teste das interfaces reais com carregamento manual pelo usuário e instrumentação da nossa UI. Os dados de memória e os limites da comparação de tempos estão em [PERFORMANCE-WINDOWS-GUI.md](PERFORMANCE-WINDOWS-GUI.md)." if (DATA / "gui-windows-comparison.json").exists() else "O acesso à captura nativa do Windows falhou na sessão de automação; a comparação quantitativa das GUIs fica limitada ao Linux."
-    lines += ["", "A medição das interfaces Linux é um recorte em Xvfb/OpenGL por software, com históricos de execução diferentes; não é um benchmark de scrolling ou p95/p99 e não mede a GPU. " + windows_note + " O smoke do aplicativo é executado nas duas plataformas.", "",
-              "Transferências limitam a janela pendente a **8 MiB estimados ou 8.192 mensagens**, incluindo estimativa de overhead. Uma mensagem maior ocupa a janela sozinha. Esse orçamento não limita o RSS total: librdkafka, buffers de rede, decodificação e GUI alocam memória adicional. Prefetch configurado em 16 MiB também pode ser excedido por uma mensagem/fetch grande. Leitura/busca retém até 128 MiB estimados de registros; a tabela permite até 20.000 resultados. Exportação e replay são streaming.", "",
-              "## Stress de 100.000 mensagens no Windows", "",
-              "Fixture adicional (~94 MB de valores), uma execução de aquecimento e três medidas. Estes testes avaliam o streaming do kafunekafka; o Offset Explorer não foi comparado neste volume.", "",
-              "| Operação | Tempo completo s (min–max) | RSS MiB | CPU agregada s |",
+            lines.append(f'- `{name}`: sampled peak RSS **{row["peak_rss_bytes_sampled"]/2**20:.1f} MiB**, CPU **{row["cpu_seconds_sampled"]:.3f} s** during {row["duration_seconds"]:.1f} s idle after loading 12,000 messages.')
+    windows_note = "External window capture on Windows failed; a later test used the real interfaces, with the user loading messages manually and our UI instrumented. Memory data and the timing comparison's limitations are in [PERFORMANCE-WINDOWS-GUI.md](PERFORMANCE-WINDOWS-GUI.md)." if (DATA / "gui-windows-comparison.json").exists() else "Native Windows capture failed during the automation session; the quantitative GUI comparison is limited to Linux."
+    lines += ["", "The Linux interface measurement is a snapshot under Xvfb/software OpenGL, with different execution histories; it is not a scrolling or p95/p99 benchmark and does not measure the GPU. " + windows_note + " The application smoke test runs on both platforms.", "",
+              "Transfers limit the in-flight window to an **estimated 8 MiB or 8,192 messages**, including estimated overhead. A larger message occupies the window on its own. This budget does not limit total RSS: librdkafka, network buffers, decoding, and the GUI allocate additional memory. The configured 16 MiB prefetch limit can also be exceeded by a large message/fetch. Reading/searching retains up to an estimated 128 MiB of records; the table allows up to 20,000 results. Export and replay use streaming.", "",
+              "## Windows stress test with 100,000 messages", "",
+              "Additional fixture (~94 MB of values), one warmup run and three measurements. These tests assess kafunekafka's streaming behavior; Offset Explorer was not compared at this volume.", "",
+              "| Operation | End-to-end time s (min–max) | RSS MiB | Aggregate CPU s |",
               "|---|---:|---:|---:|"]
     for operation, metrics in load("stress-100k-windows")["summary"].items():
         lines.append(f'| {operation} | {timing(metrics["wall_seconds"])} | {metrics["peak_rss_bytes_sampled"]["median"]/2**20:.1f} | {metrics["cpu_seconds_sampled"]["median"]:.3f} |')
     verification = load("stress-100k-archives")
     assert verification["status"] == "passed"
-    lines += ["", "Cada exportação de 100.000 registros foi conferida contra a fixture por hash por partição, preservando ordem, offsets, chave, valor, headers e timestamp. Todos os replays informaram 100.000 confirmações. O teste de integração separado confere também conteúdo e ordem no destino. O tempo de replay neste volume ainda tem variação relevante; este recorte não estabelece um limite máximo de throughput nem uma vantagem sobre o concorrente em volumes grandes.", "",
-              "## Alterações e validação", "",
-              "- Producer de lote com callbacks no worker, backpressure e drenagem das confirmações em sucesso, cancelamento e falha. Idempotência e `acks=all` continuam habilitados.",
-              "- Arquivo atômico com buffer de 256 KiB; leitor reutiliza linha e rejeita linhas acima de 64 MiB.",
-              "- Busca copia apenas registros aceitos, preservando a formatação JSON/XML/Avro usada na busca.",
-              "- Interface evita clones completos por frame e virtualiza a lista de tópicos; consumidor usa prefetch limitado e commits automáticos desabilitados.",
-              "- Sete testes unitários por plataforma; integração Kafka dos 12 requisitos; teste adicional com 2.050 mensagens de ~4 KiB, três partições, tombstones, headers binários/repetidos, timestamps, ordem, cancelamento e falha de enqueue; clippy com `-D warnings` nas duas plataformas.", "",
-              "Durante uma compilação concorrente anterior, uma fixture Linux excedeu o prazo de metadados de 10 s; a repetição passou. A versão final passou novamente nos testes completos das duas plataformas. Logs e execuções de diagnóstico permanecem em `.tools/evidence` e `artifacts/performance/raw`; tabelas acima usam apenas os conjuntos finais nomeados.", "",
-              "## Reprodução", "",
-              "Instale `psutil` em `.tools/perf-python` no Windows (`python -m pip install --target .tools/perf-python psutil`) ou no ambiente Python do Linux. Compile `cargo build --release --locked` e suba `docker compose up -d`. Instale o Offset Explorer separadamente pelo [site oficial](https://www.kafkatool.com/download.html), respeitando a licença; ele não é redistribuído nos pacotes.", "",
-              "Crie uma conexão `kafunekafka-perf` no CLI oficial e gere a fixture **uma única vez em tópicos novos**. Repetir `fixture` no mesmo tópico acrescenta mensagens. Ajuste os caminhos dos binários nos scripts se sua instalação for diferente.", "",
+    lines += ["", "Each 100,000-record export was checked against the fixture using per-partition hashes, preserving order, offsets, keys, values, headers, and timestamps. All replays reported 100,000 acknowledgements. The separate integration test also checks destination content and order. Replay time at this volume still varies considerably; this snapshot establishes neither a maximum throughput bound nor an advantage over the competing product at large volumes.", "",
+              "## Changes and validation", "",
+              "- Batch producer with worker callbacks, backpressure, and acknowledgement draining on success, cancellation, and failure. Idempotence and `acks=all` remain enabled.",
+              "- Atomic file writing with a 256 KiB buffer; the reader reuses its line buffer and rejects lines larger than 64 MiB.",
+              "- Search copies only matching records, preserving the JSON/XML/Avro formatting used during the search.",
+              "- The interface avoids full clones per frame and virtualizes the topic list; the consumer uses bounded prefetch with auto-commit disabled.",
+              "- Seven unit tests per platform; Kafka integration covering the 12 requirements; an additional test with 2,050 messages of ~4 KiB, three partitions, tombstones, binary/repeated headers, timestamps, order, cancellation, and enqueue failure; clippy with `-D warnings` on both platforms.", "",
+              "During an earlier concurrent build, a Linux fixture exceeded the 10 s metadata deadline; the retry passed. The final version passed the complete test suites on both platforms again. Logs and diagnostic runs remain in `.tools/evidence` and `artifacts/performance/raw`; the tables above use only the named final datasets.", "",
+              "## Reproduction", "",
+              "Install `psutil` in `.tools/perf-python` on Windows (`python -m pip install --target .tools/perf-python psutil`) or in the Linux Python environment. Build with `cargo build --release --locked` and start `docker compose up -d`. Install Offset Explorer separately from the [official website](https://www.kafkatool.com/download.html), respecting its licence; it is not redistributed in the packages.", "",
+              "Create a `kafunekafka-perf` connection in the official CLI and generate the fixture **once, in new topics**. Repeating `fixture` on the same topic appends messages. Adjust the binary paths in the scripts if your installation differs.", "",
               "```text",
               "commandline -addServerConnection -name kafunekafka-perf -bootstrapServers localhost:19092 -version 4.1 -security plaintext -testConnection true",
               "kafunekafka-bench fixture kafunekafka-perf-balanced-20261014-source 12000 fixture.jsonl kafunekafka-perf-balanced-20261014-destination 3",
               "python scripts/compare_offset_linux.py --trials 5",
               "python scripts/compare_replay.py --trials 5 --offset-project benchmarks/offset-replay.json",
-              "python scripts/benchmark.py --binary <kafunekafka-bench> --label <nome> --trials 5",
-              "python scripts/benchmark_desktop.py --pid <pid> --seconds 10 --label <estado-da-interface>",
+              "python scripts/benchmark.py --binary <kafunekafka-bench> --label <label> --trials 5",
+              "python scripts/benchmark_desktop.py --pid <pid> --seconds 10 --label <ui-state>",
               "python scripts/render_performance_report.py --linux-binary <kafunekafka-bench-linux>",
               "```", "",
-              "O driver geral usa a fixture original `kafunekafka-perf-20261014-source` de 10.000 mensagens e `.tools/perf-input.jsonl` para importação: gere essa fixture separadamente ou passe `--topic`, `--destination` e `--count` adequados. Os arquivos de resumo JSON acompanham os pacotes; saídas brutas permanecem no checkout local.", "",
-              "## Identificação dos binários medidos", "",
-              "| Arquivo | SHA-256 |", "|---|---|"]
+              "The general driver uses a 10,000-message fixture and `.tools/perf-input.jsonl` for import: generate that fixture separately, or supply suitable `--topic`, `--destination`, and `--count` values. Summary JSON files and raw output remain in the original measurement environment.", "",
+              "## Measured binary identification", "",
+              "| File | SHA-256 |", "|---|---|"]
     paths = [ROOT / "target/release/kafunekafka-bench.exe", args.linux_binary]
     hashes = []
     for path in paths:
