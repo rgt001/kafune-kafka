@@ -10,6 +10,7 @@ __pycache__/
 .env.*
 !.env.example
 clusters.json
+settings.json
 *.pem
 *.key
 *.pfx

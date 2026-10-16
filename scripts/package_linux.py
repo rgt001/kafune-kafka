@@ -36,9 +36,10 @@ def main():
     with tempfile.TemporaryDirectory(prefix="kafunekafka-linux-") as temporary:
         folder = Path(temporary)
         shutil.copy2(args.binary, folder / "kafunekafka")
-        for name in ["README.md", "README.pt-BR.md", "RELEASE-NOTES.md", "LICENSE", "PERFORMANCE.md", "PERFORMANCE-WINDOWS-GUI.md"]:
+        for name in ["README.md", "README.pt-BR.md", "README.ru.md", "RELEASE-NOTES.md", "LICENSE", "PERFORMANCE.md", "PERFORMANCE-WINDOWS-GUI.md"]:
             shutil.copy2(ROOT / name, folder / name)
         shutil.copytree(ROOT / "assets", folder / "assets")
+        shutil.copytree(ROOT / "locales", folder / "locales")
         collect_licenses(ROOT, folder, metadata)
         manifest = {"application": "kafunekafka", "version": version, "platform": "linux-x64",
                     "packaged_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),

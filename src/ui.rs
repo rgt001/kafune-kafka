@@ -1,9 +1,11 @@
 use crate::{
     backend::{Backend, Cancellation, cancellation},
     codec::{Decoder, DisplayFormat},
+    i18n::{Language, UiSettings},
     model::*,
     storage,
 };
+use crate::{i18n::tr, tf};
 use anyhow::{Context, Result, ensure};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use eframe::egui::{self, Color32, RichText, TextEdit};
@@ -27,12 +29,12 @@ pub enum Tab {
 impl Tab {
     fn label(self) -> &'static str {
         match self {
-            Self::Cluster => "Cluster",
-            Self::Messages => "Mensagens",
-            Self::Consumers => "Consumidores",
-            Self::Compose => "Enviar / Reenviar",
-            Self::Transfer => "Importar / Exportar / Replay",
-            Self::Search => "Buscar",
+            Self::Cluster => tr("Cluster"),
+            Self::Messages => tr("Mensagens"),
+            Self::Consumers => tr("Consumidores"),
+            Self::Compose => tr("Enviar / Reenviar"),
+            Self::Transfer => tr("Importar / Exportar / Replay"),
+            Self::Search => tr("Buscar"),
         }
     }
 }
@@ -52,6 +54,7 @@ enum Event {
 type Work = Box<dyn FnOnce(Cancellation, &dyn Fn(Progress)) -> Result<JobResult> + Send>;
 struct Job {
     work: Work,
+    language: Language,
     cancel: Cancellation,
     ctx: egui::Context,
     trace: crate::perf::Trace,
@@ -60,6 +63,7 @@ struct Job {
 fn job_worker(jobs: mpsc::Receiver<Job>, sender: mpsc::Sender<Event>) {
     while let Ok(Job {
         work,
+        language,
         cancel,
         ctx,
         trace,
@@ -70,12 +74,13 @@ fn job_worker(jobs: mpsc::Receiver<Job>, sender: mpsc::Sender<Event>) {
             let _ = sender.send(Event::Progress(p));
             ctx.request_repaint();
         };
-        let result =
+        let result = language.with(|| {
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work(cancel, &progress)))
                 .map_err(|_| {
-                    "A tarefa falhou inesperadamente; nenhuma conclusao foi assumida".into()
+                    tr("A tarefa falhou inesperadamente; nenhuma conclusao foi assumida").into()
                 })
-                .and_then(|r| r.map_err(|e| format!("{e:#}")));
+                .and_then(|r| r.map_err(|e| format!("{e:#}")))
+        });
         trace.mark("work_returned");
         if sender.send(Event::Done(result, trace)).is_err() {
             break;
@@ -97,7 +102,7 @@ struct Composer {
     timestamp: String,
     schema: String,
     schema_id: String,
-    source: String,
+    source: Option<(String, i32, i64)>,
 }
 struct PendingSave {
     record: KafkaRecord,
@@ -145,6 +150,8 @@ pub struct KafuneKafkaApp {
     error: Option<String>,
     logs: Vec<String>,
     config_path: PathBuf,
+    settings_path: PathBuf,
+    language: Language,
     smoke_output: Option<PathBuf>,
     smoke_started: bool,
     smoke_read_started: Option<Instant>,
@@ -170,7 +177,16 @@ impl KafuneKafkaApp {
             .unwrap_or_else(|| {
                 storage::profile_path().unwrap_or_else(|_| PathBuf::from("clusters.json"))
             });
-        let (profiles, error) = match storage::load_profiles(&config_path) {
+        let settings_path = config_path.with_file_name("settings.json");
+        let (settings, settings_error) = match storage::load_settings(&settings_path) {
+            Ok(settings) => (settings, None),
+            Err(error) => (UiSettings::default(), Some(format!("{error:#}"))),
+        };
+        let language = std::env::var("KAFUNEKAFKA_LANGUAGE")
+            .ok()
+            .and_then(|code| Language::from_code(&code))
+            .unwrap_or(settings.language);
+        let (profiles, error) = match language.with(|| storage::load_profiles(&config_path)) {
             Ok(p) => (p, None),
             Err(e) => (vec![], Some(format!("{e:#}"))),
         };
@@ -180,7 +196,7 @@ impl KafuneKafkaApp {
             .name("kafunekafka-worker".into())
             .spawn(move || job_worker(job_receiver, sender))
             .err()
-            .map(|e| format!("Falha ao iniciar worker: {e}"));
+            .map(|e| language.with(|| tf!("Falha ao iniciar worker: {0}", e)));
         Self {
             profiles: if profiles.is_empty() {
                 vec![ClusterProfile::default()]
@@ -225,10 +241,12 @@ impl KafuneKafkaApp {
             jobs,
             receiver,
             progress: Progress::default(),
-            status: "Selecione um cluster e conecte".into(),
-            error: worker_error.or(error),
+            status: language.with(|| tr("Selecione um cluster e conecte").into()),
+            error: worker_error.or(error).or(settings_error),
             logs: vec![],
             config_path,
+            settings_path,
+            language,
             smoke_output: smoke,
             smoke_started: false,
             smoke_read_started: None,
@@ -279,6 +297,7 @@ impl KafuneKafkaApp {
             .jobs
             .send(Job {
                 work: Box::new(work),
+                language: self.language,
                 cancel: self.cancel.clone(),
                 ctx: ctx.clone(),
                 trace: crate::perf::Trace::new("job"),
@@ -286,7 +305,7 @@ impl KafuneKafkaApp {
             .is_err()
         {
             self.busy = false;
-            self.error = Some("Worker indisponivel; reabra o aplicativo".into());
+            self.error = Some(tr("Worker indisponivel; reabra o aplicativo").into());
         }
     }
     fn connect_all(&mut self, ctx: &egui::Context) {
@@ -295,7 +314,7 @@ impl KafuneKafkaApp {
         }
         let previous_reader = self.read_backend.take();
         let profiles = self.profiles.clone();
-        self.start(ctx, "Conectando clusters", move |cancel, progress| {
+        self.start(ctx, tr("Conectando clusters"), move |cancel, progress| {
             // Explicit refresh also reloads certificates replaced at the same
             // path. Dispose of the old connection on the worker, not the UI.
             drop(previous_reader);
@@ -305,7 +324,7 @@ impl KafuneKafkaApp {
                     break;
                 }
                 progress(Progress {
-                    phase: format!("Conectando {}", profile.name),
+                    phase: tf!("Conectando {0}", profile.name),
                     ..Default::default()
                 });
                 let id = profile.id.clone();
@@ -322,7 +341,7 @@ impl KafuneKafkaApp {
     fn options(&self) -> Result<ReadOptions> {
         ensure!(
             !self.selected_topics.is_empty(),
-            "Selecione topicos na barra lateral"
+            tr("Selecione topicos na barra lateral")
         );
         let partitions = if self.partitions.trim().is_empty() {
             vec![]
@@ -332,7 +351,7 @@ impl KafuneKafkaApp {
                 .map(|v| {
                     v.trim()
                         .parse::<i32>()
-                        .context("Particoes: use numeros separados por virgula")
+                        .context(tr("Particoes: use numeros separados por virgula"))
                 })
                 .collect::<Result<Vec<_>>>()?
         };
@@ -341,13 +360,13 @@ impl KafuneKafkaApp {
             1 => StartPosition::Latest(
                 self.start_value
                     .parse()
-                    .context("Quantidade de mensagens finais invalida")?,
+                    .context(tr("Quantidade de mensagens finais invalida"))?,
             ),
-            2 => StartPosition::Offset(self.start_value.parse().context("Offset invalido")?),
+            2 => StartPosition::Offset(self.start_value.parse().context(tr("Offset invalido"))?),
             _ => StartPosition::Timestamp(
                 self.start_value
                     .parse()
-                    .context("Timestamp invalido; use milissegundos Unix")?,
+                    .context(tr("Timestamp invalido; use milissegundos Unix"))?,
             ),
         };
         Ok(ReadOptions {
@@ -369,7 +388,7 @@ impl KafuneKafkaApp {
         };
         if options.max_messages > 20_000 {
             self.error = Some(
-                "A tabela aceita ate 20.000 resultados. Use exportacao para volumes maiores."
+                tr("A tabela aceita ate 20.000 resultados. Use exportacao para volumes maiores.")
                     .into(),
             );
             return;
@@ -388,9 +407,9 @@ impl KafuneKafkaApp {
         self.start(
             ctx,
             if search {
-                "Buscando no Kafka"
+                tr("Buscando no Kafka")
             } else {
-                "Lendo mensagens"
+                tr("Lendo mensagens")
             },
             move |cancel, progress| {
                 let trace = crate::perf::Trace::new("read_worker");
@@ -422,7 +441,7 @@ impl KafuneKafkaApp {
         };
         let profile = self.profile();
         let format = self.format;
-        self.start(ctx, "Formatando mensagem", move |_, _| {
+        self.start(ctx, tr("Formatando mensagem"), move |_, _| {
             let trace = crate::perf::Trace::new("decode_worker");
             let mut decoder = Decoder::new(&profile)?;
             trace.mark("decoder_created");
@@ -448,7 +467,7 @@ impl KafuneKafkaApp {
                     self.busy = false;
                     match result {
                         Err(error) => {
-                            self.log(format!("Erro: {error}"));
+                            self.log(tf!("Erro: {0}", error));
                             self.error = Some(error);
                         }
                         Ok(JobResult::Snapshots(results)) => {
@@ -467,7 +486,7 @@ impl KafuneKafkaApp {
                                     }
                                 }
                             }
-                            self.log(format!("{} clusters conectados", self.snapshots.len()));
+                            self.log(tf!("{0} clusters conectados", self.snapshots.len()));
                         }
                         Ok(JobResult::Records(result, decoded)) => {
                             self.records = result.records;
@@ -477,8 +496,8 @@ impl KafuneKafkaApp {
                                 Some(0)
                             };
                             (self.key_display, self.value_display) = decoded.unwrap_or_default();
-                            self.log(format!(
-                                "{} mensagens exibidas; {} examinadas. {}",
+                            self.log(tf!(
+                                "{0} mensagens exibidas; {1} examinadas. {2}",
                                 self.records.len(),
                                 result.report.scanned,
                                 result.report.message
@@ -486,11 +505,14 @@ impl KafuneKafkaApp {
                         }
                         Ok(JobResult::Offsets(offsets)) => {
                             self.offsets = offsets;
-                            self.log(format!("{} offsets consultados", self.offsets.len()));
+                            self.log(tf!("{0} offsets consultados", self.offsets.len()));
                         }
                         Ok(JobResult::Report(report)) => self.log(report.message),
-                        Ok(JobResult::Published(topic, p, o)) => self.log(format!(
-                            "Mensagem confirmada: {topic} / particao {p} / offset {o}"
+                        Ok(JobResult::Published(topic, p, o)) => self.log(tf!(
+                            "Mensagem confirmada: {0} / particao {1} / offset {2}",
+                            topic,
+                            p,
+                            o
                         )),
                         Ok(JobResult::Decoded(index, key, value)) => {
                             if self.selected_record == Some(index) {
@@ -498,7 +520,7 @@ impl KafuneKafkaApp {
                                 self.value_display = value;
                             }
                         }
-                        Ok(JobResult::Saved(path)) => self.log(format!("Arquivo salvo: {path}")),
+                        Ok(JobResult::Saved(path)) => self.log(tf!("Arquivo salvo: {0}", path)),
                     }
                 }
             }
@@ -509,18 +531,18 @@ impl KafuneKafkaApp {
             egui::ComboBox::from_id_salt("start")
                 .selected_text(
                     [
-                        "Inicio",
-                        "Ultimas N por particao",
-                        "Offset",
-                        "Timestamp Unix ms",
+                        tr("Inicio"),
+                        tr("Ultimas N por particao"),
+                        tr("Offset"),
+                        tr("Timestamp Unix ms"),
                     ][self.start_mode],
                 )
                 .show_ui(ui, |ui| {
                     for (i, label) in [
-                        "Inicio",
-                        "Ultimas N por particao",
-                        "Offset",
-                        "Timestamp Unix ms",
+                        tr("Inicio"),
+                        tr("Ultimas N por particao"),
+                        tr("Offset"),
+                        tr("Timestamp Unix ms"),
                     ]
                     .iter()
                     .enumerate()
@@ -531,21 +553,21 @@ impl KafuneKafkaApp {
             if self.start_mode != 0 {
                 ui.add(TextEdit::singleline(&mut self.start_value).desired_width(145.));
             }
-            ui.label("Particoes");
+            ui.label(tr("Particoes"));
             ui.add(
                 TextEdit::singleline(&mut self.partitions)
-                    .hint_text("Todas, ou 0,1,2")
+                    .hint_text(tr("Todas, ou 0,1,2"))
                     .desired_width(130.),
             );
-            ui.label("Resultados");
+            ui.label(tr("Resultados"));
             ui.add(egui::DragValue::new(&mut self.limit).range(1..=1_000_000));
         });
         ui.horizontal_wrapped(|ui| {
-            ui.label("Examinar ate");
+            ui.label(tr("Examinar ate"));
             ui.add(egui::DragValue::new(&mut self.scan_limit).range(1..=10_000_000));
-            ui.label("mensagens / timeout");
+            ui.label(tr("mensagens / timeout"));
             ui.add(egui::DragValue::new(&mut self.timeout).range(1..=3600));
-            ui.label("segundos");
+            ui.label(tr("segundos"));
         });
     }
     fn sidebar(&mut self, ctx: &egui::Context) {
@@ -553,7 +575,7 @@ impl KafuneKafkaApp {
             .resizable(true)
             .default_width(245.)
             .show(ctx, |ui| {
-                ui.heading("Clusters");
+                ui.heading(tr("Clusters"));
                 ui.add_enabled_ui(!self.busy, |ui| {
                     for (index, p) in self.profiles.iter().enumerate() {
                         let connected = self.snapshots.contains_key(&p.id);
@@ -581,24 +603,26 @@ impl KafuneKafkaApp {
                         });
                     }
                     ui.horizontal(|ui| {
-                        if ui.button("+ Novo").clicked() {
+                        if ui.button(tr("+ Novo")).clicked() {
                             self.profile_edit = Some(ClusterProfile::default());
                             self.properties_json = "{}".into();
                         }
-                        if ui.button("Editar").clicked() {
+                        if ui.button(tr("Editar")).clicked() {
                             let p = self.profile();
                             self.properties_json =
                                 serde_json::to_string_pretty(&p.properties).unwrap();
                             self.profile_edit = Some(p);
                         }
                     });
-                    if ui.button("Conectar / atualizar todos").clicked() {
+                    if ui.button(tr("Conectar / atualizar todos")).clicked() {
                         self.connect_all(ctx);
                     }
                 });
                 ui.separator();
-                ui.heading("Topicos");
-                ui.add(TextEdit::singleline(&mut self.topic_filter).hint_text("Filtrar topicos"));
+                ui.heading(tr("Topicos"));
+                ui.add(
+                    TextEdit::singleline(&mut self.topic_filter).hint_text(tr("Filtrar topicos")),
+                );
                 let topics = self
                     .profiles
                     .get(self.selected_cluster)
@@ -634,7 +658,7 @@ impl KafuneKafkaApp {
                                 }
                             }
                             if topics.is_empty() {
-                                ui.weak("Conecte para listar os topicos");
+                                ui.weak(tr("Conecte para listar os topicos"));
                             }
                         },
                     );
@@ -643,38 +667,43 @@ impl KafuneKafkaApp {
     }
     fn cluster_view(&mut self, ui: &mut egui::Ui) {
         let Some(snapshot) = self.snapshot() else {
-            ui.heading("Seu Kafka, em um lugar");
-            ui.label("Cadastre os clusters, conecte e selecione topicos na barra lateral.");
+            ui.heading(tr("Seu Kafka, em um lugar"));
+            ui.label(tr(
+                "Cadastre os clusters, conecte e selecione topicos na barra lateral.",
+            ));
             return;
         };
         ui.heading(&self.profile().name);
         ui.horizontal(|ui| {
-            ui.label(format!("{} brokers", snapshot.brokers.len()));
+            ui.label(tf!("{0} brokers", snapshot.brokers.len()));
             ui.separator();
-            ui.label(format!("{} topicos", snapshot.topics.len()));
+            ui.label(tf!("{0} topicos", snapshot.topics.len()));
             ui.separator();
-            ui.label(format!("{} consumer groups", snapshot.groups.len()));
+            ui.label(tf!("{0} consumer groups", snapshot.groups.len()));
         });
         ui.separator();
-        ui.heading("Brokers");
+        ui.heading(tr("Brokers"));
         for b in &snapshot.brokers {
             ui.monospace(format!("#{}  {}:{}", b.id, b.host, b.port));
         }
         ui.separator();
-        ui.heading("Topicos e particoes");
+        ui.heading(tr("Topicos e particoes"));
         egui::ScrollArea::vertical().show(ui, |ui| {
             for topic in &snapshot.topics {
-                egui::CollapsingHeader::new(format!(
-                    "{} / {} particoes",
+                egui::CollapsingHeader::new(tf!(
+                    "{0} / {1} particoes",
                     topic.name,
                     topic.partitions.len()
                 ))
                 .id_salt(&topic.name)
                 .show(ui, |ui| {
                     for p in &topic.partitions {
-                        ui.monospace(format!(
-                            "Particao {}   Leader {}   Replicas {:?}   ISR {:?}",
-                            p.id, p.leader, p.replicas, p.in_sync
+                        ui.monospace(tf!(
+                            "Particao {0}   Leader {1}   Replicas {2}   ISR {3}",
+                            p.id,
+                            p.leader,
+                            format!("{:?}", p.replicas),
+                            format!("{:?}", p.in_sync)
                         ));
                     }
                 });
@@ -684,7 +713,7 @@ impl KafuneKafkaApp {
     fn messages_view(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         ui.add_enabled_ui(!self.busy, |ui| {
             self.read_controls(ui);
-            if ui.button("Ler mensagens").clicked() {
+            if ui.button(tr("Ler mensagens")).clicked() {
                 self.load_messages(ctx, false);
             }
         });
@@ -704,12 +733,12 @@ impl KafuneKafkaApp {
                 .column(Column::remainder())
                 .header(25., |mut h| {
                     for text in [
-                        "Topico",
-                        "Particao",
-                        "Offset",
-                        "Timestamp (UTC)",
-                        "Chave",
-                        "Valor",
+                        tr("Topico"),
+                        tr("Particao"),
+                        tr("Offset"),
+                        tr("Timestamp (UTC)"),
+                        tr("Chave"),
+                        tr("Valor"),
                     ] {
                         h.col(|ui| {
                             ui.strong(text);
@@ -778,14 +807,14 @@ impl KafuneKafkaApp {
             self.decode_selected(ctx);
         }
         if self.records.is_empty() {
-            ui.weak("Nenhuma mensagem carregada");
+            ui.weak(tr("Nenhuma mensagem carregada"));
             return;
         }
         ui.separator();
         ui.add_enabled_ui(!self.busy, |ui| {
             ui.horizontal_wrapped(|ui| {
                 let previous = self.format;
-                ui.label("Valor:");
+                ui.label(tr("Valor:"));
                 egui::ComboBox::from_id_salt("format")
                     .selected_text(self.format.label())
                     .show_ui(ui, |ui| {
@@ -796,10 +825,10 @@ impl KafuneKafkaApp {
                 if self.format != previous {
                     self.decode_selected(ctx);
                 }
-                if ui.button("Editar e reenviar").clicked() {
+                if ui.button(tr("Editar e reenviar")).clicked() {
                     self.prepare_resend();
                 }
-                if ui.button("Salvar mensagem").clicked()
+                if ui.button(tr("Salvar mensagem")).clicked()
                     && let Some(index) = self.selected_record
                 {
                     let record = self.records[index].clone();
@@ -809,7 +838,7 @@ impl KafuneKafkaApp {
                         raw: false,
                     });
                 }
-                if ui.button("Salvar valor binario").clicked()
+                if ui.button(tr("Salvar valor binario")).clicked()
                     && let Some(index) = self.selected_record
                 {
                     let record = self.records[index].clone();
@@ -823,8 +852,8 @@ impl KafuneKafkaApp {
         });
         if let Some(index) = self.selected_record {
             let r = &self.records[index];
-            ui.weak(format!(
-                "{} / particao {} / offset {} / {} bytes / {} headers",
+            ui.weak(tf!(
+                "{0} / particao {1} / offset {2} / {3} bytes / {4} headers",
                 r.topic,
                 r.partition,
                 r.offset,
@@ -836,7 +865,7 @@ impl KafuneKafkaApp {
             .id_salt("detail")
             .show(ui, |ui| {
                 ui.columns(2, |cols| {
-                    cols[0].strong("Chave");
+                    cols[0].strong(tr("Chave"));
                     cols[0].add(
                         TextEdit::multiline(&mut self.key_display)
                             .code_editor()
@@ -844,7 +873,7 @@ impl KafuneKafkaApp {
                             .desired_width(f32::INFINITY)
                             .desired_rows(12),
                     );
-                    cols[1].strong("Valor");
+                    cols[1].strong(tr("Valor"));
                     cols[1].add(
                         TextEdit::multiline(&mut self.value_display)
                             .code_editor()
@@ -854,7 +883,7 @@ impl KafuneKafkaApp {
                     );
                 });
                 if let Some(index) = self.selected_record {
-                    egui::CollapsingHeader::new("Headers / metadados").show(ui, |ui| {
+                    egui::CollapsingHeader::new(tr("Headers / metadados")).show(ui, |ui| {
                         for h in &self.records[index].headers {
                             ui.monospace(format!("{} = {}", h.key, preview(h.value.as_deref())));
                         }
@@ -867,12 +896,12 @@ impl KafuneKafkaApp {
             .snapshot()
             .map(|s| s.groups.clone())
             .unwrap_or_default();
-        ui.heading("Consumer groups");
+        ui.heading(tr("Consumer groups"));
         ui.add_enabled_ui(!self.busy, |ui| {
             ui.horizontal(|ui| {
                 egui::ComboBox::from_id_salt("group")
                     .selected_text(if self.group.is_empty() {
-                        "Selecione um grupo"
+                        tr("Selecione um grupo")
                     } else {
                         &self.group
                     })
@@ -881,16 +910,16 @@ impl KafuneKafkaApp {
                             ui.selectable_value(
                                 &mut self.group,
                                 g.name.clone(),
-                                format!("{} / {} / {} membros", g.name, g.state, g.members.len()),
+                                tf!("{0} / {1} / {2} membros", g.name, g.state, g.members.len()),
                             );
                         }
                     });
-                ui.add(TextEdit::singleline(&mut self.group).hint_text("Ou informe group.id"));
-                if ui.button("Consultar offsets").clicked() {
+                ui.add(TextEdit::singleline(&mut self.group).hint_text(tr("Ou informe group.id")));
+                if ui.button(tr("Consultar offsets")).clicked() {
                     let backend = Backend::new(self.profile());
                     let group = self.group.clone();
                     let topics: Vec<_> = self.selected_topics.iter().cloned().collect();
-                    self.start(ctx, "Consultando offsets", move |_, _| {
+                    self.start(ctx, tr("Consultando offsets"), move |_, _| {
                         Ok(JobResult::Offsets(backend.group_offsets(&group, &topics)?))
                     });
                 }
@@ -911,7 +940,14 @@ impl KafuneKafkaApp {
             .column(Column::initial(100.))
             .column(Column::initial(100.))
             .header(25., |mut h| {
-                for text in ["Topico", "Particao", "Commit", "Inicio", "Fim", "Lag"] {
+                for text in [
+                    tr("Topico"),
+                    tr("Particao"),
+                    tr("Commit"),
+                    tr("Inicio"),
+                    tr("Fim"),
+                    tr("Lag"),
+                ] {
                     h.col(|ui| {
                         ui.strong(text);
                     });
@@ -925,7 +961,7 @@ impl KafuneKafkaApp {
                         o.partition.to_string(),
                         o.committed
                             .map(|n| n.to_string())
-                            .unwrap_or_else(|| "Sem commit".into()),
+                            .unwrap_or_else(|| tr("Sem commit").into()),
                         o.low.to_string(),
                         o.high.to_string(),
                         o.lag.map(|n| n.to_string()).unwrap_or_else(|| "—".into()),
@@ -946,7 +982,7 @@ impl KafuneKafkaApp {
         let (value, value_mode) = editable(r.value.as_deref());
         self.composer=Composer{topic:r.topic.clone(),partition:r.partition.to_string(),key,value,key_mode,value_mode,key_null:r.key.is_none(),value_null:r.value.is_none(),
             headers:serde_json::to_string_pretty(&r.headers.iter().map(|h|serde_json::json!({"key":h.key,"value_base64":h.value.as_ref().map(|v|STANDARD.encode(v))})).collect::<Vec<_>>()).unwrap(),
-            timestamp:r.timestamp.map(|n|n.to_string()).unwrap_or_default(),schema:self.profile().avro_schema,schema_id:String::new(),source:format!("Origem: {} / {} / offset {}",r.topic,r.partition,r.offset)};
+            timestamp:r.timestamp.map(|n|n.to_string()).unwrap_or_default(),schema:self.profile().avro_schema,schema_id:String::new(),source:Some((r.topic.clone(),r.partition,r.offset))};
         if let Some(value) = &r.value
             && value.len() >= 5
             && value[0] == 0
@@ -961,61 +997,64 @@ impl KafuneKafkaApp {
         self.tab = Tab::Compose;
     }
     fn composer_view(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        egui::ScrollArea::vertical().show(ui,|ui|{ui.heading("Enviar mensagem");if !self.composer.source.is_empty(){ui.label(&self.composer.source);ui.weak("O reenvio cria uma nova mensagem no destino.");}
+        egui::ScrollArea::vertical().show(ui,|ui|{ui.heading(tr("Enviar mensagem"));if let Some((topic, partition, offset))=&self.composer.source{ui.label(tf!("Origem: {0} / {1} / offset {2}", topic, partition, offset));ui.weak(tr("O reenvio cria uma nova mensagem no destino."));}
             ui.add_enabled_ui(!self.busy,|ui|{
-                ui.horizontal(|ui|{ui.label("Topico");ui.text_edit_singleline(&mut self.composer.topic);ui.label("Particao");ui.add(TextEdit::singleline(&mut self.composer.partition).hint_text("Auto").desired_width(80.));});
+                ui.horizontal(|ui|{ui.label(tr("Topico"));ui.text_edit_singleline(&mut self.composer.topic);ui.label(tr("Particao"));ui.add(TextEdit::singleline(&mut self.composer.partition).hint_text(tr("Auto")).desired_width(80.));});
                 ui.columns(2,|columns|{
-                    columns[0].horizontal(|ui|{ui.strong("Chave");ui.checkbox(&mut self.composer.key_null,"null");encoding_combo(ui,"key_encoding",&mut self.composer.key_mode,false);});
+                    columns[0].horizontal(|ui|{ui.strong(tr("Chave"));ui.checkbox(&mut self.composer.key_null,"null");encoding_combo(ui,"key_encoding",&mut self.composer.key_mode,false);});
                     columns[0].add_enabled(!self.composer.key_null,TextEdit::multiline(&mut self.composer.key).code_editor().desired_rows(9).desired_width(f32::INFINITY));
-                    columns[1].horizontal(|ui|{ui.strong("Valor");ui.checkbox(&mut self.composer.value_null,"null");encoding_combo(ui,"value_encoding",&mut self.composer.value_mode,true);});
+                    columns[1].horizontal(|ui|{ui.strong(tr("Valor"));ui.checkbox(&mut self.composer.value_null,"null");encoding_combo(ui,"value_encoding",&mut self.composer.value_mode,true);});
                     columns[1].add_enabled(!self.composer.value_null,TextEdit::multiline(&mut self.composer.value).code_editor().desired_rows(9).desired_width(f32::INFINITY));
                 });
-                if self.composer.value_mode==3{ui.horizontal(|ui|{ui.label("Schema id (opcional)");ui.text_edit_singleline(&mut self.composer.schema_id);});ui.add(TextEdit::multiline(&mut self.composer.schema).hint_text("Schema Avro JSON, ou vazio para carregar o id do registry").code_editor().desired_rows(5).desired_width(f32::INFINITY));}
-                egui::CollapsingHeader::new("Headers e timestamp").show(ui,|ui|{ui.label("Headers JSON: [{\"key\":\"nome\",\"value_base64\":\"...\"}] (aceita null e nomes repetidos)");ui.add(TextEdit::multiline(&mut self.composer.headers).code_editor().desired_rows(4).desired_width(f32::INFINITY));ui.horizontal(|ui|{ui.label("Timestamp Unix ms");ui.add(TextEdit::singleline(&mut self.composer.timestamp).hint_text("Vazio = horario do broker"));});});
-                if ui.button(RichText::new("Enviar ao Kafka").strong()).clicked(){let draft=self.composer.clone();let backend=Backend::new(self.profile());self.start(ctx,"Aguardando confirmacao do broker",move|_,_|{let mut decoder=Decoder::new(&backend.profile)?;let record=compose(&draft,&mut decoder)?;let(p,o)=backend.send(&record)?;Ok(JobResult::Published(record.topic,p,o))});}
+                if self.composer.value_mode==3{ui.horizontal(|ui|{ui.label(tr("Schema id (opcional)"));ui.text_edit_singleline(&mut self.composer.schema_id);});ui.add(TextEdit::multiline(&mut self.composer.schema).hint_text(tr("Schema Avro JSON, ou vazio para carregar o id do registry")).code_editor().desired_rows(5).desired_width(f32::INFINITY));}
+                egui::CollapsingHeader::new(tr("Headers e timestamp")).show(ui,|ui|{ui.label(tr("Headers JSON: [{\"key\":\"nome\",\"value_base64\":\"...\"}] (aceita null e nomes repetidos)"));ui.add(TextEdit::multiline(&mut self.composer.headers).code_editor().desired_rows(4).desired_width(f32::INFINITY));ui.horizontal(|ui|{ui.label(tr("Timestamp Unix ms"));ui.add(TextEdit::singleline(&mut self.composer.timestamp).hint_text(tr("Vazio = horario do broker")));});});
+                if ui.button(RichText::new(tr("Enviar ao Kafka")).strong()).clicked(){let draft=self.composer.clone();let backend=Backend::new(self.profile());self.start(ctx,tr("Aguardando confirmacao do broker"),move|_,_|{let mut decoder=Decoder::new(&backend.profile)?;let record=compose(&draft,&mut decoder)?;let(p,o)=backend.send(&record)?;Ok(JobResult::Published(record.topic,p,o))});}
             });
         });
     }
     fn transfer_view(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         egui::ScrollArea::vertical().show(ui,|ui|{ui.add_enabled_ui(!self.busy,|ui|{
             self.read_controls(ui);ui.separator();
-            ui.horizontal(|ui|{ui.label("Cluster de destino");egui::ComboBox::from_id_salt("destination_cluster").selected_text(&self.profiles[self.destination_cluster.min(self.profiles.len()-1)].name).show_ui(ui,|ui|{for(index,p)in self.profiles.iter().enumerate(){ui.selectable_value(&mut self.destination_cluster,index,&p.name);}});ui.label("Topico de destino");ui.text_edit_singleline(&mut self.destination_topic);});
-            ui.horizontal(|ui|{ui.checkbox(&mut self.keep_partition,"Preservar particao");ui.checkbox(&mut self.keep_timestamp,"Preservar timestamp");});ui.weak("Chave, valor e todos os headers sao preservados. Offsets novos sao atribuidos pelo destino.");
-            ui.group(|ui|{ui.heading("Exportar topicos para arquivo");ui.horizontal(|ui|{ui.add(TextEdit::singleline(&mut self.export_path).hint_text("Arquivo .jsonl").desired_width(420.));if ui.button("Escolher arquivo").clicked()&& let Some(path)=rfd::FileDialog::new().set_file_name("messages.jsonl").save_file(){self.export_path=path.display().to_string();}});
-                if ui.button("Exportar faixa selecionada").clicked(){match self.options(){Ok(options)=>{let backend=Backend::new(self.profile());let path=PathBuf::from(&self.export_path);self.start(ctx,"Exportando mensagens",move|cancel,progress|Ok(JobResult::Report(backend.export(&options,&path,&cancel,progress)?)));},Err(e)=>self.error=Some(e.to_string())}}
-                if ui.button("Exportar mensagens da tabela").clicked(){let records=self.records.clone();let path=PathBuf::from(&self.export_path);self.start(ctx,"Salvando tabela",move|_,_|{ensure!(!records.is_empty(),"A tabela esta vazia");storage::save_records(&path,&records)?;Ok(JobResult::Saved(path.display().to_string()))});}
+            ui.horizontal(|ui|{ui.label(tr("Cluster de destino"));egui::ComboBox::from_id_salt("destination_cluster").selected_text(&self.profiles[self.destination_cluster.min(self.profiles.len()-1)].name).show_ui(ui,|ui|{for(index,p)in self.profiles.iter().enumerate(){ui.selectable_value(&mut self.destination_cluster,index,&p.name);}});ui.label(tr("Topico de destino"));ui.text_edit_singleline(&mut self.destination_topic);});
+            ui.horizontal(|ui|{ui.checkbox(&mut self.keep_partition,tr("Preservar particao"));ui.checkbox(&mut self.keep_timestamp,tr("Preservar timestamp"));});ui.weak(tr("Chave, valor e todos os headers sao preservados. Offsets novos sao atribuidos pelo destino."));
+            ui.group(|ui|{ui.heading(tr("Exportar topicos para arquivo"));ui.horizontal(|ui|{ui.add(TextEdit::singleline(&mut self.export_path).hint_text(tr("Arquivo .jsonl")).desired_width(420.));if ui.button(tr("Escolher arquivo")).clicked()&& let Some(path)=rfd::FileDialog::new().set_file_name("messages.jsonl").save_file(){self.export_path=path.display().to_string();}});
+                if ui.button(tr("Exportar faixa selecionada")).clicked(){match self.options(){Ok(options)=>{let backend=Backend::new(self.profile());let path=PathBuf::from(&self.export_path);self.start(ctx,tr("Exportando mensagens"),move|cancel,progress|Ok(JobResult::Report(backend.export(&options,&path,&cancel,progress)?)));},Err(e)=>self.error=Some(e.to_string())}}
+                if ui.button(tr("Exportar mensagens da tabela")).clicked(){let records=self.records.clone();let path=PathBuf::from(&self.export_path);self.start(ctx,tr("Salvando tabela"),move|_,_|{ensure!(!records.is_empty(),tr("A tabela esta vazia"));storage::save_records(&path,&records)?;Ok(JobResult::Saved(path.display().to_string()))});}
             });
-            ui.group(|ui|{ui.heading("Importar arquivo para topico");ui.label("O arquivo JSONL exportado preserva binarios, tombstones e headers.");ui.horizontal(|ui|{ui.add(TextEdit::singleline(&mut self.import_path).hint_text("Arquivo .jsonl").desired_width(420.));if ui.button("Abrir arquivo").clicked()&& let Some(path)=rfd::FileDialog::new().pick_file(){self.import_path=path.display().to_string();}});
-                if ui.button("Validar e importar").clicked(){let backend=Backend::new(self.profiles[self.destination_cluster].clone());let path=PathBuf::from(&self.import_path);let topic=self.destination_topic.clone();let keep_partition=self.keep_partition;let keep_timestamp=self.keep_timestamp;self.start(ctx,"Validando arquivo de importacao",move|cancel,progress|Ok(JobResult::Report(backend.import(&path,&topic,keep_partition,keep_timestamp,&cancel,progress)?)));}
+            ui.group(|ui|{ui.heading(tr("Importar arquivo para topico"));ui.label(tr("O arquivo JSONL exportado preserva binarios, tombstones e headers."));ui.horizontal(|ui|{ui.add(TextEdit::singleline(&mut self.import_path).hint_text(tr("Arquivo .jsonl")).desired_width(420.));if ui.button(tr("Abrir arquivo")).clicked()&& let Some(path)=rfd::FileDialog::new().pick_file(){self.import_path=path.display().to_string();}});
+                if ui.button(tr("Validar e importar")).clicked(){let backend=Backend::new(self.profiles[self.destination_cluster].clone());let path=PathBuf::from(&self.import_path);let topic=self.destination_topic.clone();let keep_partition=self.keep_partition;let keep_timestamp=self.keep_timestamp;self.start(ctx,tr("Validando arquivo de importacao"),move|cancel,progress|Ok(JobResult::Report(backend.import(&path,&topic,keep_partition,keep_timestamp,&cancel,progress)?)));}
             });
-            ui.group(|ui|{ui.heading("Replay para outro topico");ui.label("Le o snapshot da origem e aguarda a confirmacao de cada envio.");if ui.button("Executar replay").clicked(){match self.options(){Ok(options)=>{let source=Backend::new(self.profile());let destination=Backend::new(self.profiles[self.destination_cluster].clone());let replay=ReplayOptions{destination_topic:self.destination_topic.clone(),preserve_partition:self.keep_partition,preserve_timestamp:self.keep_timestamp};self.start(ctx,"Executando replay",move|cancel,progress|Ok(JobResult::Report(source.replay(&options,&destination,&replay,&cancel,progress)?)));},Err(e)=>self.error=Some(e.to_string())}}});
+            ui.group(|ui|{ui.heading(tr("Replay para outro topico"));ui.label(tr("Le o snapshot da origem e aguarda a confirmacao de cada envio."));if ui.button(tr("Executar replay")).clicked(){match self.options(){Ok(options)=>{let source=Backend::new(self.profile());let destination=Backend::new(self.profiles[self.destination_cluster].clone());let replay=ReplayOptions{destination_topic:self.destination_topic.clone(),preserve_partition:self.keep_partition,preserve_timestamp:self.keep_timestamp};self.start(ctx,tr("Executando replay"),move|cancel,progress|Ok(JobResult::Report(source.replay(&options,&destination,&replay,&cancel,progress)?)));},Err(e)=>self.error=Some(e.to_string())}}});
         });});
     }
     fn search_view(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.heading("Buscar em topicos e particoes");
+        ui.heading(tr("Buscar em topicos e particoes"));
         ui.add_enabled_ui(!self.busy, |ui| {
             self.read_controls(ui);
             ui.add(
                 TextEdit::singleline(&mut self.search.pattern)
-                    .hint_text("Texto ou expressao regular")
+                    .hint_text(tr("Texto ou expressao regular"))
                     .desired_width(f32::INFINITY),
             );
             ui.horizontal_wrapped(|ui| {
-                ui.checkbox(&mut self.search.regex, "Regex");
-                ui.checkbox(&mut self.search.case_sensitive, "Diferenciar maiusculas");
-                ui.checkbox(&mut self.search.keys, "Chaves");
-                ui.checkbox(&mut self.search.values, "Valores");
-                ui.checkbox(&mut self.search.headers, "Headers");
-                if ui.button("Buscar no Kafka").clicked() {
+                ui.checkbox(&mut self.search.regex, tr("Regex"));
+                ui.checkbox(
+                    &mut self.search.case_sensitive,
+                    tr("Diferenciar maiusculas"),
+                );
+                ui.checkbox(&mut self.search.keys, tr("Chaves"));
+                ui.checkbox(&mut self.search.values, tr("Valores"));
+                ui.checkbox(&mut self.search.headers, tr("Headers"));
+                if ui.button(tr("Buscar no Kafka")).clicked() {
                     self.load_messages(ctx, true);
                 }
             });
         });
-        ui.label(format!(
-            "{} resultados. Abra a aba Mensagens para inspecionar, salvar ou reenviar.",
+        ui.label(tf!(
+            "{0} resultados. Abra a aba Mensagens para inspecionar, salvar ou reenviar.",
             self.records.len()
         ));
-        if ui.button("Ver resultados").clicked() {
+        if ui.button(tr("Ver resultados")).clicked() {
             self.tab = Tab::Messages;
         }
     }
@@ -1031,20 +1070,22 @@ impl KafuneKafkaApp {
         let mut save = false;
         let mut cancel = false;
         egui::Window::new(if pending.raw {
-            "Salvar valor binario"
+            tr("Salvar valor binario")
         } else {
-            "Salvar mensagem"
+            tr("Salvar mensagem")
         })
         .open(&mut open)
         .default_width(620.)
         .show(ctx, |ui| {
-            ui.label(format!(
-                "{} / particao {} / offset {}",
-                pending.record.topic, pending.record.partition, pending.record.offset
+            ui.label(tf!(
+                "{0} / particao {1} / offset {2}",
+                pending.record.topic,
+                pending.record.partition,
+                pending.record.offset
             ));
-            ui.label("Arquivo de destino");
+            ui.label(tr("Arquivo de destino"));
             ui.add(TextEdit::singleline(&mut pending.path).desired_width(f32::INFINITY));
-            if ui.button("Escolher local...").clicked()
+            if ui.button(tr("Escolher local...")).clicked()
                 && let Some(path) = rfd::FileDialog::new()
                     .set_file_name(if pending.raw {
                         "value.bin"
@@ -1056,15 +1097,15 @@ impl KafuneKafkaApp {
                 pending.path = path.display().to_string();
             }
             ui.horizontal(|ui| {
-                save = ui.button("Salvar").clicked();
-                cancel = ui.button("Cancelar").clicked();
+                save = ui.button(tr("Salvar")).clicked();
+                cancel = ui.button(tr("Cancelar")).clicked();
             });
         });
         if save {
             let path = PathBuf::from(&pending.path);
             let record = pending.record.clone();
             let raw = pending.raw;
-            self.start(ctx, "Salvando mensagem", move |_, _| {
+            self.start(ctx, tr("Salvando mensagem"), move |_, _| {
                 if raw {
                     storage::save_raw(&path, record.value.as_deref())?;
                 } else {
@@ -1087,14 +1128,14 @@ impl KafuneKafkaApp {
         let mut open = true;
         let mut save = false;
         let mut cancel = false;
-        egui::Window::new("Configuracao do cluster").open(&mut open).default_width(620.).resizable(true).show(ctx,|ui|{egui::ScrollArea::vertical().max_height(650.).show(ui,|ui|{
-            field(ui,"Nome",&mut p.name,false);field(ui,"Bootstrap servers",&mut p.bootstrap_servers,false);
+        egui::Window::new(tr("Configuracao do cluster")).open(&mut open).default_width(620.).resizable(true).show(ctx,|ui|{egui::ScrollArea::vertical().max_height(650.).show(ui,|ui|{
+            field(ui,tr("Nome"),&mut p.name,false);field(ui,tr("Bootstrap servers"),&mut p.bootstrap_servers,false);
             egui::ComboBox::from_id_salt("security").selected_text(&p.security_protocol).show_ui(ui,|ui|{for protocol in["PLAINTEXT","SSL","SASL_PLAINTEXT","SASL_SSL"]{ui.selectable_value(&mut p.security_protocol,protocol.into(),protocol);}});
-            if p.security_protocol.starts_with("SASL"){egui::ComboBox::from_id_salt("mechanism").selected_text(&p.sasl_mechanism).show_ui(ui,|ui|{for mechanism in["PLAIN","SCRAM-SHA-256","SCRAM-SHA-512"]{ui.selectable_value(&mut p.sasl_mechanism,mechanism.into(),mechanism);}});field(ui,"Usuario",&mut p.username,false);field(ui,"Senha (sessao)",&mut p.password,true);field(ui,"Variavel de ambiente da senha",&mut p.password_env,false);}
-            if p.security_protocol.ends_with("SSL"){field(ui,"CA PEM (opcional)",&mut p.ca_path,false);field(ui,"Certificado cliente PEM",&mut p.certificate_path,false);field(ui,"Chave cliente PEM",&mut p.private_key_path,false);}
-            ui.separator();ui.strong("Avro / Schema Registry");field(ui,"URL do registry",&mut p.registry_url,false);field(ui,"Usuario do registry",&mut p.registry_username,false);field(ui,"Senha do registry (sessao)",&mut p.registry_password,true);field(ui,"Variavel da senha do registry",&mut p.registry_password_env,false);ui.add(TextEdit::multiline(&mut p.avro_schema).hint_text("Schema Avro local (opcional)").code_editor().desired_rows(4).desired_width(f32::INFINITY));
-            egui::CollapsingHeader::new("Propriedades Kafka adicionais (JSON)").show(ui,|ui|{ui.add(TextEdit::multiline(&mut self.properties_json).code_editor().desired_rows(4).desired_width(f32::INFINITY));});
-            ui.weak("Senhas digitadas ficam apenas na sessao; use variaveis de ambiente para reaproveitar credenciais.");ui.horizontal(|ui|{save=ui.button("Salvar cluster").clicked();cancel=ui.button("Cancelar").clicked();});
+            if p.security_protocol.starts_with("SASL"){egui::ComboBox::from_id_salt("mechanism").selected_text(&p.sasl_mechanism).show_ui(ui,|ui|{for mechanism in["PLAIN","SCRAM-SHA-256","SCRAM-SHA-512"]{ui.selectable_value(&mut p.sasl_mechanism,mechanism.into(),mechanism);}});field(ui,tr("Usuario"),&mut p.username,false);field(ui,tr("Senha (sessao)"),&mut p.password,true);field(ui,tr("Variavel de ambiente da senha"),&mut p.password_env,false);}
+            if p.security_protocol.ends_with("SSL"){field(ui,tr("CA PEM (opcional)"),&mut p.ca_path,false);field(ui,tr("Certificado cliente PEM"),&mut p.certificate_path,false);field(ui,tr("Chave cliente PEM"),&mut p.private_key_path,false);}
+            ui.separator();ui.strong(tr("Avro / Schema Registry"));field(ui,tr("URL do registry"),&mut p.registry_url,false);field(ui,tr("Usuario do registry"),&mut p.registry_username,false);field(ui,tr("Senha do registry (sessao)"),&mut p.registry_password,true);field(ui,tr("Variavel da senha do registry"),&mut p.registry_password_env,false);ui.add(TextEdit::multiline(&mut p.avro_schema).hint_text(tr("Schema Avro local (opcional)")).code_editor().desired_rows(4).desired_width(f32::INFINITY));
+            egui::CollapsingHeader::new(tr("Propriedades Kafka adicionais (JSON)")).show(ui,|ui|{ui.add(TextEdit::multiline(&mut self.properties_json).code_editor().desired_rows(4).desired_width(f32::INFINITY));});
+            ui.weak(tr("Senhas digitadas ficam apenas na sessao; use variaveis de ambiente para reaproveitar credenciais."));ui.horizontal(|ui|{save=ui.button(tr("Salvar cluster")).clicked();cancel=ui.button(tr("Cancelar")).clicked();});
         });});
         if save {
             match serde_json::from_str::<BTreeMap<String, String>>(&self.properties_json) {
@@ -1124,13 +1165,13 @@ impl KafuneKafkaApp {
                                 key_null: true,
                                 ..Default::default()
                             };
-                            self.log("Cluster salvo".into());
+                            self.log(tr("Cluster salvo").into());
                             open = false;
                         }
                         Err(e) => self.error = Some(format!("{e:#}")),
                     }
                 }
-                Err(e) => self.error = Some(format!("Propriedades invalidas: {e}")),
+                Err(e) => self.error = Some(tf!("Propriedades invalidas: {0}", e)),
             }
         }
         if open && !cancel {
@@ -1264,12 +1305,48 @@ impl Drop for KafuneKafkaApp {
 }
 impl eframe::App for KafuneKafkaApp {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        self.language.with(|| self.render(ctx));
+    }
+}
+impl KafuneKafkaApp {
+    fn change_language(&mut self, language: Language) {
+        self.language = language;
+        language.with(|| {
+            match storage::save_settings(&self.settings_path, &UiSettings { language }) {
+                Ok(()) => self.log(tr("Idioma alterado").into()),
+                Err(error) => {
+                    self.error = Some(tf!("Nao foi possivel salvar o idioma: {0}", error))
+                }
+            }
+        });
+    }
+
+    fn render(&mut self, ctx: &egui::Context) {
         self.receive();
         egui::TopBottomPanel::top("brand").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.heading(RichText::new("kafunekafka").color(Color32::from_rgb(85, 180, 255)));
-                ui.weak("Explorar • inspecionar • reproduzir");
+                ui.weak(tr("Explorar • inspecionar • reproduzir"));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let mut language = self.language;
+                    ui.add_enabled_ui(!self.busy, |ui| {
+                        egui::ComboBox::from_id_salt("language")
+                            .selected_text(language.name())
+                            .width(110.)
+                            .show_ui(ui, |ui| {
+                                for option in Language::ALL {
+                                    ui.selectable_value(&mut language, option, option.name());
+                                }
+                            });
+                        ui.label(tr("Idioma"));
+                    });
+                    if language != self.language {
+                        self.change_language(language);
+                        if self.selected_record.is_some() {
+                            language.with(|| self.decode_selected(ctx));
+                        }
+                        ctx.request_repaint();
+                    }
                     ui.label(&self.profile().name);
                 });
             });
@@ -1279,11 +1356,13 @@ impl eframe::App for KafuneKafkaApp {
                 ui.horizontal_wrapped(|ui| {
                     ui.spinner();
                     ui.label(&self.progress.phase);
-                    ui.label(format!(
-                        "{} examinadas / {} resultados / {} confirmadas",
-                        self.progress.scanned, self.progress.matched, self.progress.delivered
+                    ui.label(tf!(
+                        "{0} examinadas / {1} resultados / {2} confirmadas",
+                        self.progress.scanned,
+                        self.progress.matched,
+                        self.progress.delivered
                     ));
-                    if ui.button("Cancelar").clicked() {
+                    if ui.button(tr("Cancelar")).clicked() {
                         self.cancel.store(true, Ordering::Relaxed);
                     }
                 });
@@ -1293,7 +1372,7 @@ impl eframe::App for KafuneKafkaApp {
             if let Some(error) = &self.error {
                 ui.colored_label(Color32::from_rgb(255, 125, 115), error);
             }
-            egui::CollapsingHeader::new("Historico de operacoes").show(ui, |ui| {
+            egui::CollapsingHeader::new(tr("Historico de operacoes")).show(ui, |ui| {
                 egui::ScrollArea::vertical()
                     .max_height(130.)
                     .show(ui, |ui| {
@@ -1358,8 +1437,9 @@ fn decode_record(
 ) -> (String, String) {
     let mut display = |bytes: Option<&[u8]>, format| {
         decoder.display(bytes, format).unwrap_or_else(|e| {
-            format!(
-                "Erro de decodificacao: {e:#}\n\nBytes (base64): {}",
+            tf!(
+                "Erro de decodificacao: {0}\n\nBytes (base64): {1}",
+                format!("{:#}", e),
                 bytes.map(|v| STANDARD.encode(v)).unwrap_or_default()
             )
         })
@@ -1372,7 +1452,7 @@ fn decode_record(
 fn preview(bytes: Option<&[u8]>) -> String {
     match bytes {
         None => "null".into(),
-        Some([]) => "(vazio)".into(),
+        Some([]) => tr("(vazio)").into(),
         Some(bytes)
             if std::str::from_utf8(&bytes[..bytes.len().min(90)])
                 .is_err_and(|e| e.error_len().is_some())
@@ -1381,8 +1461,8 @@ fn preview(bytes: Option<&[u8]>) -> String {
                     .take(90)
                     .any(|b| *b < 32 && !b"\r\n\t".contains(b)) =>
         {
-            format!(
-                "[binario, {} B] {}",
+            tf!(
+                "[binario, {0} B] {1}",
                 bytes.len(),
                 hex::encode(&bytes[..bytes.len().min(14)])
             )
@@ -1409,9 +1489,9 @@ fn editable(bytes: Option<&[u8]>) -> (String, usize) {
 }
 fn encoding_combo(ui: &mut egui::Ui, id: &str, value: &mut usize, avro: bool) {
     egui::ComboBox::from_id_salt(id)
-        .selected_text(["Texto UTF-8", "Base64", "Hex", "Avro JSON"][*value])
+        .selected_text([tr("Texto UTF-8"), "Base64", "Hex", tr("Avro JSON")][*value])
         .show_ui(ui, |ui| {
-            for (index, label) in ["Texto UTF-8", "Base64", "Hex", "Avro JSON"]
+            for (index, label) in [tr("Texto UTF-8"), "Base64", "Hex", tr("Avro JSON")]
                 .iter()
                 .enumerate()
                 .take(if avro { 4 } else { 3 })
@@ -1423,9 +1503,11 @@ fn encoding_combo(ui: &mut egui::Ui, id: &str, value: &mut usize, avro: bool) {
 fn encode(text: &str, mode: usize) -> Result<Vec<u8>> {
     match mode {
         0 => Ok(text.as_bytes().to_vec()),
-        1 => Ok(STANDARD.decode(text.trim()).context("Base64 invalido")?),
-        2 => Ok(hex::decode(text.trim()).context("Hex invalido")?),
-        _ => anyhow::bail!("Codificacao invalida"),
+        1 => Ok(STANDARD
+            .decode(text.trim())
+            .context(tr("Base64 invalido"))?),
+        2 => Ok(hex::decode(text.trim()).context(tr("Hex invalido"))?),
+        _ => anyhow::bail!(tr("Codificacao invalida")),
     }
 }
 fn compose(draft: &Composer, decoder: &mut Decoder) -> Result<ProduceRecord> {
@@ -1436,7 +1518,7 @@ fn compose(draft: &Composer, decoder: &mut Decoder) -> Result<ProduceRecord> {
             draft
                 .partition
                 .parse::<i32>()
-                .context("Particao invalida")?,
+                .context(tr("Particao invalida"))?,
         )
     };
     let timestamp = if draft.timestamp.trim().is_empty() {
@@ -1446,7 +1528,7 @@ fn compose(draft: &Composer, decoder: &mut Decoder) -> Result<ProduceRecord> {
             draft
                 .timestamp
                 .parse::<i64>()
-                .context("Timestamp invalido")?,
+                .context(tr("Timestamp invalido"))?,
         )
     };
     let key = if draft.key_null {
@@ -1460,14 +1542,14 @@ fn compose(draft: &Composer, decoder: &mut Decoder) -> Result<ProduceRecord> {
         let id = if draft.schema_id.trim().is_empty() {
             None
         } else {
-            Some(draft.schema_id.parse().context("Schema id invalido")?)
+            Some(draft.schema_id.parse().context(tr("Schema id invalido"))?)
         };
         Some(decoder.encode_avro(&draft.value, &draft.schema, id)?)
     } else {
         Some(encode(&draft.value, draft.value_mode)?)
     };
     let json: Vec<serde_json::Value> =
-        serde_json::from_str(&draft.headers).context("Headers JSON invalidos")?;
+        serde_json::from_str(&draft.headers).context(tr("Headers JSON invalidos"))?;
     let headers = json
         .into_iter()
         .map(|h| {
@@ -1475,14 +1557,14 @@ fn compose(draft: &Composer, decoder: &mut Decoder) -> Result<ProduceRecord> {
                 key: h
                     .get("key")
                     .and_then(|v| v.as_str())
-                    .context("Header sem key")?
+                    .context(tr("Header sem key"))?
                     .into(),
                 value: match h.get("value_base64") {
                     None | Some(serde_json::Value::Null) => None,
                     Some(v) => Some(
                         STANDARD.decode(
                             v.as_str()
-                                .context("Header value_base64 deve ser string ou null")?,
+                                .context(tr("Header value_base64 deve ser string ou null"))?,
                         )?,
                     ),
                 },
@@ -1503,12 +1585,150 @@ fn compose(draft: &Composer, decoder: &mut Decoder) -> Result<ProduceRecord> {
 mod tests {
     use super::*;
     #[test]
+    fn language_menu_switches_and_persists_from_pointer_input() {
+        fn frame(
+            app: &mut KafuneKafkaApp,
+            ctx: &egui::Context,
+            events: Vec<egui::Event>,
+        ) -> egui::FullOutput {
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1380., 900.),
+                )),
+                events,
+                ..Default::default()
+            };
+            ctx.run(input, |ctx| app.language.with(|| app.render(ctx)))
+        }
+        fn position(output: &egui::FullOutput, label: &str) -> egui::Pos2 {
+            output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text) if text.galley.job.text == label => {
+                        Some(text.pos + text.galley.size() * 0.5)
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("Label not rendered: {label}"))
+        }
+        fn click(app: &mut KafuneKafkaApp, ctx: &egui::Context, position: egui::Pos2) {
+            let _ = frame(
+                app,
+                ctx,
+                vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+        }
+        let directory = tempfile::tempdir().unwrap();
+        let ctx = egui::Context::default();
+        let mut app = KafuneKafkaApp::create(None);
+        app.language = Language::Portuguese;
+        app.settings_path = directory.path().join("settings.json");
+        for language in [Language::English, Language::Russian] {
+            let output = frame(&mut app, &ctx, vec![]);
+            let selected = position(&output, app.language.name());
+            click(&mut app, &ctx, selected);
+            let output = frame(&mut app, &ctx, vec![]);
+            let target = position(&output, language.name());
+            click(&mut app, &ctx, target);
+            assert_eq!(app.language, language);
+            assert_eq!(
+                storage::load_settings(&app.settings_path).unwrap().language,
+                language
+            );
+            let output = frame(&mut app, &ctx, vec![]);
+            let _ = position(&output, language.text("Mensagens"));
+        }
+    }
+
+    #[test]
+    fn selected_language_is_saved_without_changing_cluster_profiles() {
+        let directory = tempfile::tempdir().unwrap();
+        let profiles_path = directory.path().join("clusters.json");
+        storage::save_profiles(&profiles_path, &[ClusterProfile::default()]).unwrap();
+        let original = std::fs::read(&profiles_path).unwrap();
+        let mut app = KafuneKafkaApp::create(None);
+        app.settings_path = directory.path().join("settings.json");
+        assert_eq!(
+            storage::load_settings(&app.settings_path).unwrap().language,
+            Language::Portuguese
+        );
+        for language in [Language::English, Language::Russian, Language::Portuguese] {
+            app.change_language(language);
+            assert_eq!(app.language, language);
+            assert_eq!(app.status, language.text("Idioma alterado"));
+            assert_eq!(
+                storage::load_settings(&app.settings_path).unwrap().language,
+                language
+            );
+            assert_eq!(std::fs::read(&profiles_path).unwrap(), original);
+        }
+        std::fs::write(&app.settings_path, r#"{"language":"unknown"}"#).unwrap();
+        assert!(storage::load_settings(&app.settings_path).is_err());
+    }
+
+    #[test]
+    fn worker_uses_each_jobs_language_for_progress_and_validation() {
+        let (jobs, receiver) = mpsc::channel();
+        let (events, replies) = mpsc::channel();
+        let worker = std::thread::spawn(move || job_worker(receiver, events));
+        for language in [Language::English, Language::Russian, Language::Portuguese] {
+            jobs.send(Job {
+                language,
+                work: Box::new(|_, progress| {
+                    progress(Progress {
+                        phase: tr("Lendo mensagens").into(),
+                        ..Default::default()
+                    });
+                    let backend = Backend::new(ClusterProfile::default());
+                    backend.config()?;
+                    anyhow::bail!(tr("Selecione topicos na barra lateral"))
+                }),
+                cancel: cancellation(),
+                ctx: egui::Context::default(),
+                trace: crate::perf::Trace::new("locale_test"),
+            })
+            .unwrap();
+            match replies.recv_timeout(Duration::from_secs(5)).unwrap() {
+                Event::Progress(progress) => {
+                    assert_eq!(progress.phase, language.text("Lendo mensagens"))
+                }
+                _ => panic!("Expected localized progress"),
+            }
+            match replies.recv_timeout(Duration::from_secs(5)).unwrap() {
+                Event::Done(Err(error), _) => {
+                    assert_eq!(error, language.text("Selecione topicos na barra lateral"))
+                }
+                _ => panic!("Expected localized validation error"),
+            }
+        }
+        drop(jobs);
+        worker.join().unwrap();
+    }
+
+    #[test]
     fn worker_reuses_thread_and_delivers_next_job_after_a_panic() {
         let (jobs, receiver) = mpsc::channel();
         let (events, replies) = mpsc::channel();
         let worker = std::thread::spawn(move || job_worker(receiver, events));
         for index in 0..3 {
             jobs.send(Job {
+                language: Language::Portuguese,
                 work: Box::new(move |_, _| {
                     assert_ne!(index, 1, "fixture panic");
                     Ok(JobResult::Saved(format!(

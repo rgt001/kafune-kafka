@@ -14,6 +14,14 @@ use std::{sync::atomic::Ordering, time::Duration};
 #[test]
 #[ignore = "Requires the two Kafka clusters and Schema Registry in compose.yaml"]
 fn all_twelve_requirements_against_real_kafka() -> Result<()> {
+    let language = std::env::var("KAFUNEKAFKA_LANGUAGE")
+        .ok()
+        .and_then(|code| kafunekafka::i18n::Language::from_code(&code))
+        .unwrap_or_default();
+    language.with(validate_all_twelve_requirements)
+}
+
+fn validate_all_twelve_requirements() -> Result<()> {
     let suffix = &uuid::Uuid::new_v4().simple().to_string()[..8];
     let source = format!("kafunekafka-it-source-{suffix}");
     let imported = format!("kafunekafka-it-import-{suffix}");

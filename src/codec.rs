@@ -1,4 +1,5 @@
 use crate::model::ClusterProfile;
+use crate::{i18n::tr, tf};
 use anyhow::{Context, Result, bail, ensure};
 use apache_avro::{Schema, types::Value};
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -31,12 +32,12 @@ impl DisplayFormat {
     ];
     pub fn label(self) -> &'static str {
         match self {
-            Self::Auto => "Auto",
-            Self::Text => "Texto",
+            Self::Auto => tr("Auto"),
+            Self::Text => tr("Texto"),
             Self::Json => "JSON",
             Self::Xml => "XML",
             Self::Avro => "Avro",
-            Self::AvroRaw => "Avro bruto",
+            Self::AvroRaw => tr("Avro bruto"),
             Self::Hex => "Hex",
             Self::Base64 => "Base64",
         }
@@ -72,7 +73,7 @@ impl Decoder {
     }
     pub fn display(&mut self, bytes: Option<&[u8]>, format: DisplayFormat) -> Result<String> {
         let Some(bytes) = bytes else {
-            return Ok("null (tombstone)".into());
+            return Ok(tr("null (tombstone)").into());
         };
         if format == DisplayFormat::Hex {
             return Ok(hex::encode(bytes));
@@ -83,14 +84,14 @@ impl Decoder {
         if format == DisplayFormat::AvroRaw {
             ensure!(
                 !self.profile.avro_schema.trim().is_empty(),
-                "Configure o schema local para Avro bruto"
+                tr("Configure o schema local para Avro bruto")
             );
             let schema = Schema::parse_str(&self.profile.avro_schema)?;
             let mut input = Cursor::new(bytes);
             let value = apache_avro::from_avro_datum(&schema, &mut input, None)?;
             ensure!(
                 input.position() == bytes.len() as u64,
-                "Bytes adicionais depois do datum Avro bruto"
+                tr("Bytes adicionais depois do datum Avro bruto")
             );
             return Ok(serde_json::to_string_pretty(&avro_json(value)?)?);
         }
@@ -103,13 +104,13 @@ impl Decoder {
         let text = match std::str::from_utf8(bytes) {
             Ok(text) => text,
             Err(_) if format == DisplayFormat::Auto => {
-                return Ok(format!(
-                    "[binario, {} bytes]\n{}",
+                return Ok(tf!(
+                    "[binario, {0} bytes]\n{1}",
                     bytes.len(),
                     hex::encode(bytes)
                 ));
             }
-            Err(e) => return Err(e).context("Dados nao sao UTF-8; selecione Hex ou Base64"),
+            Err(e) => return Err(e).context(tr("Dados nao sao UTF-8; selecione Hex ou Base64")),
         };
         if format == DisplayFormat::Json
             || format == DisplayFormat::Auto
@@ -117,7 +118,9 @@ impl Decoder {
         {
             match serde_json::from_str::<serde_json::Value>(text) {
                 Ok(json) => return Ok(serde_json::to_string_pretty(&json)?),
-                Err(e) if format == DisplayFormat::Json => return Err(e).context("JSON invalido"),
+                Err(e) if format == DisplayFormat::Json => {
+                    return Err(e).context(tr("JSON invalido"));
+                }
                 _ => (),
             }
         }
@@ -153,7 +156,7 @@ impl Decoder {
         } else {
             ensure!(
                 !self.profile.avro_schema.trim().is_empty(),
-                "Avro binario exige um schema local ou Schema Registry"
+                tr("Avro binario exige um schema local ou Schema Registry")
             );
             (Schema::parse_str(&self.profile.avro_schema)?, bytes, vec![])
         };
@@ -164,10 +167,10 @@ impl Decoder {
             &mut payload,
             None,
         )
-        .context("Payload Avro invalido")?;
+        .context(tr("Payload Avro invalido"))?;
         ensure!(
             payload.position() == payload.get_ref().len() as u64,
-            "Bytes adicionais depois do datum Avro"
+            tr("Bytes adicionais depois do datum Avro")
         );
         Ok(serde_json::to_string_pretty(&avro_json(value)?)?)
     }
@@ -177,7 +180,10 @@ impl Decoder {
         }
         ensure!(
             !self.profile.registry_url.trim().is_empty(),
-            "Mensagem usa Schema Registry (id {id}); configure a URL do registry"
+            tf!(
+                "Mensagem usa Schema Registry (id {0}); configure a URL do registry",
+                id
+            )
         );
         let response = self.registry_get(&format!("schemas/ids/{id}"))?;
         let mut texts = vec![];
@@ -186,13 +192,13 @@ impl Decoder {
         let text = response
             .get("schema")
             .and_then(|v| v.as_str())
-            .context("Resposta do registry sem schema")?;
+            .context(tr("Resposta do registry sem schema"))?;
         let schema = if texts.is_empty() {
             Schema::parse_str(text)?
         } else {
             texts.push(text.to_owned());
             let parsed = Schema::parse_list(&texts)?;
-            let root = parsed.last().context("Schema Avro vazio")?.clone();
+            let root = parsed.last().context(tr("Schema Avro vazio"))?.clone();
             self.dependencies.insert(id, parsed);
             root
         };
@@ -209,7 +215,7 @@ impl Decoder {
         if !self.profile.registry_username.is_empty() {
             let password = if !self.profile.registry_password_env.is_empty() {
                 std::env::var(&self.profile.registry_password_env)
-                    .context("Variavel da senha do registry ausente")?
+                    .context(tr("Variavel da senha do registry ausente"))?
             } else {
                 self.profile.registry_password.clone()
             };
@@ -217,7 +223,7 @@ impl Decoder {
         }
         let response: serde_json::Value = request
             .send()
-            .context("Falha ao acessar Schema Registry")?
+            .context(tr("Falha ao acessar Schema Registry"))?
             .error_for_status()?
             .json()?;
         if response
@@ -225,7 +231,7 @@ impl Decoder {
             .and_then(|v| v.as_str())
             .is_some_and(|s| s != "AVRO")
         {
-            bail!("Schema do registry nao e Avro");
+            bail!(tr("Schema do registry nao e Avro"));
         }
         Ok(response)
     }
@@ -239,17 +245,20 @@ impl Decoder {
             for reference in references {
                 let subject = reference["subject"]
                     .as_str()
-                    .context("Referencia Avro sem subject")?;
+                    .context(tr("Referencia Avro sem subject"))?;
                 let version = reference["version"]
                     .as_i64()
-                    .context("Referencia Avro sem version")?;
+                    .context(tr("Referencia Avro sem version"))?;
                 if !seen.insert((subject.into(), version)) {
                     continue;
                 }
-                ensure!(seen.len() <= 64, "Schema Avro tem mais de 64 referencias");
+                ensure!(
+                    seen.len() <= 64,
+                    tr("Schema Avro tem mais de 64 referencias")
+                );
                 let mut url = reqwest::Url::parse(&self.profile.registry_url)?;
                 url.path_segments_mut()
-                    .map_err(|_| anyhow::anyhow!("URL do registry invalida"))?
+                    .map_err(|_| anyhow::anyhow!(tr("URL do registry invalida")))?
                     .pop_if_empty()
                     .extend(["subjects", subject, "versions", &version.to_string()]);
                 let base = reqwest::Url::parse(&self.profile.registry_url)?;
@@ -263,7 +272,7 @@ impl Decoder {
                 texts.push(
                     referenced["schema"]
                         .as_str()
-                        .context("Referencia Avro sem schema")?
+                        .context(tr("Referencia Avro sem schema"))?
                         .into(),
                 );
             }
@@ -277,7 +286,7 @@ impl Decoder {
         schema_id: Option<u32>,
     ) -> Result<Vec<u8>> {
         let schema = if schema_text.trim().is_empty() {
-            self.schema(schema_id.context("Informe schema local ou id do registry")?)?
+            self.schema(schema_id.context(tr("Informe schema local ou id do registry"))?)?
         } else {
             Schema::parse_str(schema_text)?
         };
@@ -285,7 +294,10 @@ impl Decoder {
             let registered = self.schema(id)?;
             ensure!(
                 registered.canonical_form() == schema.canonical_form(),
-                "O schema local difere do schema registrado para o id {id}"
+                tf!(
+                    "O schema local difere do schema registrado para o id {0}",
+                    id
+                )
             );
             self.dependencies.get(&id).cloned().unwrap_or_default()
         } else {
@@ -294,7 +306,7 @@ impl Decoder {
         let value: Value = serde_json::from_str::<serde_json::Value>(json)?.into();
         let value = value
             .resolve_schemata(&schema, dependencies.iter().collect())
-            .context("JSON nao corresponde ao schema Avro")?;
+            .context(tr("JSON nao corresponde ao schema Avro"))?;
         let payload =
             apache_avro::to_avro_datum_schemata(&schema, dependencies.iter().collect(), value)?;
         let mut output = Vec::new();
@@ -310,7 +322,7 @@ fn avro_json(value: Value) -> Result<serde_json::Value> {
     Ok(value.try_into()?)
 }
 pub fn pretty_xml(text: &str) -> Result<String> {
-    roxmltree::Document::parse(text).context("XML invalido")?;
+    roxmltree::Document::parse(text).context(tr("XML invalido"))?;
     let mut reader = quick_xml::Reader::from_str(text);
     reader.config_mut().trim_text(false);
     let mut writer = quick_xml::Writer::new_with_indent(Vec::new(), b' ', 2);

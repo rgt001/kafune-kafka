@@ -1,0 +1,1050 @@
+{
+  "Cluster": [
+    "Cluster",
+    "Кластер"
+  ],
+  "Clusters": [
+    "Clusters",
+    "Кластеры"
+  ],
+  "Mensagens": [
+    "Messages",
+    "Сообщения"
+  ],
+  "Consumidores": [
+    "Consumers",
+    "Потребители"
+  ],
+  "Enviar / Reenviar": [
+    "Send / Resend",
+    "Отправка / Повтор"
+  ],
+  "Importar / Exportar / Replay": [
+    "Import / Export / Replay",
+    "Импорт / Экспорт / Перенос"
+  ],
+  "Buscar": [
+    "Search",
+    "Поиск"
+  ],
+  "A tarefa falhou inesperadamente; nenhuma conclusao foi assumida": [
+    "The task failed unexpectedly; its outcome is unknown",
+    "Задача неожиданно завершилась с ошибкой; результат неизвестен"
+  ],
+  "Falha ao iniciar worker: {0}": [
+    "Could not start worker: {0}",
+    "Не удалось запустить рабочий поток: {0}"
+  ],
+  "Selecione um cluster e conecte": [
+    "Select a cluster and connect",
+    "Выберите кластер и подключитесь"
+  ],
+  "Worker indisponivel; reabra o aplicativo": [
+    "Worker unavailable; restart the application",
+    "Рабочий поток недоступен; перезапустите приложение"
+  ],
+  "Conectando clusters": [
+    "Connecting to clusters",
+    "Подключение к кластерам"
+  ],
+  "Conectando {0}": [
+    "Connecting to {0}",
+    "Подключение к {0}"
+  ],
+  "Selecione topicos na barra lateral": [
+    "Select topics in the sidebar",
+    "Выберите топики на боковой панели"
+  ],
+  "Particoes: use numeros separados por virgula": [
+    "Partitions: enter comma-separated numbers",
+    "Разделы: введите номера через запятую"
+  ],
+  "Quantidade de mensagens finais invalida": [
+    "Invalid number of latest messages",
+    "Недопустимое число последних сообщений"
+  ],
+  "Offset invalido": [
+    "Invalid offset",
+    "Недопустимое смещение"
+  ],
+  "Timestamp invalido; use milissegundos Unix": [
+    "Invalid timestamp; use Unix milliseconds",
+    "Недопустимая метка времени; используйте Unix-время в миллисекундах"
+  ],
+  "A tabela aceita ate 20.000 resultados. Use exportacao para volumes maiores.": [
+    "The table supports up to 20,000 results. Use export for larger selections.",
+    "Таблица вмещает до 20 000 результатов. Для большего объёма используйте экспорт."
+  ],
+  "Buscando no Kafka": [
+    "Searching Kafka",
+    "Поиск в Kafka"
+  ],
+  "Lendo mensagens": [
+    "Reading messages",
+    "Чтение сообщений"
+  ],
+  "Formatando mensagem": [
+    "Formatting message",
+    "Форматирование сообщения"
+  ],
+  "Erro: {0}": [
+    "Error: {0}",
+    "Ошибка: {0}"
+  ],
+  "{0} clusters conectados": [
+    "Connected clusters: {0}",
+    "Подключено кластеров: {0}"
+  ],
+  "{0} mensagens exibidas; {1} examinadas. {2}": [
+    "Messages displayed: {0}; scanned: {1}. {2}",
+    "Показано сообщений: {0}; просмотрено: {1}. {2}"
+  ],
+  "{0} offsets consultados": [
+    "Offsets retrieved: {0}",
+    "Получено смещений: {0}"
+  ],
+  "Mensagem confirmada: {0} / particao {1} / offset {2}": [
+    "Message acknowledged: {0} / partition {1} / offset {2}",
+    "Сообщение подтверждено: {0} / раздел {1} / смещение {2}"
+  ],
+  "Arquivo salvo: {0}": [
+    "File saved: {0}",
+    "Файл сохранён: {0}"
+  ],
+  "Inicio": [
+    "Earliest",
+    "С начала"
+  ],
+  "Ultimas N por particao": [
+    "Latest N per partition",
+    "Последние N на раздел"
+  ],
+  "Offset": [
+    "Offset",
+    "Смещение"
+  ],
+  "Timestamp Unix ms": [
+    "Unix timestamp (ms)",
+    "Unix-время (мс)"
+  ],
+  "Particoes": [
+    "Partitions",
+    "Разделы"
+  ],
+  "Todas, ou 0,1,2": [
+    "All, or 0,1,2",
+    "Все или 0,1,2"
+  ],
+  "Resultados": [
+    "Results",
+    "Результаты"
+  ],
+  "Examinar ate": [
+    "Scan up to",
+    "Просмотреть до"
+  ],
+  "mensagens / timeout": [
+    "messages / timeout",
+    "сообщений / тайм-аут"
+  ],
+  "segundos": [
+    "seconds",
+    "секунд"
+  ],
+  "+ Novo": [
+    "+ New",
+    "+ Новый"
+  ],
+  "Editar": [
+    "Edit",
+    "Изменить"
+  ],
+  "Conectar / atualizar todos": [
+    "Connect / refresh all",
+    "Подключить / Обновить все"
+  ],
+  "Topicos": [
+    "Topics",
+    "Топики"
+  ],
+  "Filtrar topicos": [
+    "Filter topics",
+    "Фильтр топиков"
+  ],
+  "Conecte para listar os topicos": [
+    "Connect to list topics",
+    "Подключитесь для просмотра топиков"
+  ],
+  "Seu Kafka, em um lugar": [
+    "Your Kafka, in one place",
+    "Весь ваш Kafka в одном месте"
+  ],
+  "Cadastre os clusters, conecte e selecione topicos na barra lateral.": [
+    "Add your clusters, connect, and select topics in the sidebar.",
+    "Добавьте кластеры, подключитесь и выберите топики на боковой панели."
+  ],
+  "{0} brokers": [
+    "Brokers: {0}",
+    "Брокеры: {0}"
+  ],
+  "{0} topicos": [
+    "Topics: {0}",
+    "Топики: {0}"
+  ],
+  "{0} consumer groups": [
+    "Consumer groups: {0}",
+    "Группы потребителей: {0}"
+  ],
+  "Brokers": [
+    "Brokers",
+    "Брокеры"
+  ],
+  "Topicos e particoes": [
+    "Topics and partitions",
+    "Топики и разделы"
+  ],
+  "{0} / {1} particoes": [
+    "{0} / partitions: {1}",
+    "{0} / разделов: {1}"
+  ],
+  "Particao {0}   Leader {1}   Replicas {2}   ISR {3}": [
+    "Partition {0}   Leader {1}   Replicas {2}   ISR {3}",
+    "Раздел {0}   Лидер {1}   Реплики {2}   ISR {3}"
+  ],
+  "Ler mensagens": [
+    "Read messages",
+    "Прочитать сообщения"
+  ],
+  "Topico": [
+    "Topic",
+    "Топик"
+  ],
+  "Particao": [
+    "Partition",
+    "Раздел"
+  ],
+  "Timestamp (UTC)": [
+    "Timestamp (UTC)",
+    "Время (UTC)"
+  ],
+  "Chave": [
+    "Key",
+    "Ключ"
+  ],
+  "Valor": [
+    "Value",
+    "Значение"
+  ],
+  "Valor:": [
+    "Value:",
+    "Значение:"
+  ],
+  "Nenhuma mensagem carregada": [
+    "No messages loaded",
+    "Сообщения не загружены"
+  ],
+  "Auto": [
+    "Auto",
+    "Авто"
+  ],
+  "Texto": [
+    "Text",
+    "Текст"
+  ],
+  "Avro bruto": [
+    "Raw Avro",
+    "Avro без заголовка"
+  ],
+  "Editar e reenviar": [
+    "Edit and resend",
+    "Изменить и отправить"
+  ],
+  "Salvar mensagem": [
+    "Save message",
+    "Сохранить сообщение"
+  ],
+  "Salvar valor binario": [
+    "Save raw value",
+    "Сохранить байты значения"
+  ],
+  "{0} / particao {1} / offset {2} / {3} bytes / {4} headers": [
+    "{0} / partition {1} / offset {2} / {3} bytes / {4} headers",
+    "{0} / раздел {1} / смещение {2} / {3} байт / заголовков: {4}"
+  ],
+  "Headers / metadados": [
+    "Headers / metadata",
+    "Заголовки / Метаданные"
+  ],
+  "Consumer groups": [
+    "Consumer groups",
+    "Группы потребителей"
+  ],
+  "Selecione um grupo": [
+    "Select a group",
+    "Выберите группу"
+  ],
+  "{0} / {1} / {2} membros": [
+    "{0} / {1} / members: {2}",
+    "{0} / {1} / участников: {2}"
+  ],
+  "Ou informe group.id": [
+    "Or enter group.id",
+    "Или введите group.id"
+  ],
+  "Consultar offsets": [
+    "Fetch offsets",
+    "Получить смещения"
+  ],
+  "Consultando offsets": [
+    "Fetching offsets",
+    "Получение смещений"
+  ],
+  "Commit": [
+    "Committed",
+    "Сохранено"
+  ],
+  "Fim": [
+    "End",
+    "Конец"
+  ],
+  "Lag": [
+    "Lag",
+    "Отставание"
+  ],
+  "Sem commit": [
+    "Not committed",
+    "Не сохранено"
+  ],
+  "Origem: {0} / {1} / offset {2}": [
+    "Source: {0} / {1} / offset {2}",
+    "Источник: {0} / {1} / смещение {2}"
+  ],
+  "Enviar mensagem": [
+    "Send message",
+    "Отправить сообщение"
+  ],
+  "O reenvio cria uma nova mensagem no destino.": [
+    "Resending creates a new message at the destination.",
+    "Повторная отправка создаёт новое сообщение в целевом топике."
+  ],
+  "Schema id (opcional)": [
+    "Schema ID (optional)",
+    "ID схемы (необязательно)"
+  ],
+  "Schema Avro JSON, ou vazio para carregar o id do registry": [
+    "Avro JSON schema; leave empty to load the ID from the registry",
+    "Схема Avro JSON; оставьте пустым для загрузки по ID из реестра"
+  ],
+  "Headers e timestamp": [
+    "Headers and timestamp",
+    "Заголовки и время"
+  ],
+  "Headers JSON: [{\"key\":\"nome\",\"value_base64\":\"...\"}] (aceita null e nomes repetidos)": [
+    "JSON headers: [{\"key\":\"name\",\"value_base64\":\"...\"}] (null and repeated names allowed)",
+    "Заголовки JSON: [{\"key\":\"name\",\"value_base64\":\"...\"}] (допустимы null и повторяющиеся имена)"
+  ],
+  "Vazio = horario do broker": [
+    "Empty = broker time",
+    "Пусто = время брокера"
+  ],
+  "Enviar ao Kafka": [
+    "Send to Kafka",
+    "Отправить в Kafka"
+  ],
+  "Aguardando confirmacao do broker": [
+    "Waiting for broker acknowledgement",
+    "Ожидание подтверждения брокера"
+  ],
+  "Cluster de destino": [
+    "Destination cluster",
+    "Целевой кластер"
+  ],
+  "Topico de destino": [
+    "Destination topic",
+    "Целевой топик"
+  ],
+  "Preservar particao": [
+    "Preserve partition",
+    "Сохранить раздел"
+  ],
+  "Preservar timestamp": [
+    "Preserve timestamp",
+    "Сохранить метку времени"
+  ],
+  "Chave, valor e todos os headers sao preservados. Offsets novos sao atribuidos pelo destino.": [
+    "Key, value and all headers are preserved. The destination assigns new offsets.",
+    "Ключ, значение и все заголовки сохраняются. Целевой топик назначает новые смещения."
+  ],
+  "Exportar topicos para arquivo": [
+    "Export topics to a file",
+    "Экспорт топиков в файл"
+  ],
+  "Arquivo .jsonl": [
+    ".jsonl file",
+    "Файл .jsonl"
+  ],
+  "Escolher arquivo": [
+    "Choose file",
+    "Выбрать файл"
+  ],
+  "Exportar faixa selecionada": [
+    "Export selected range",
+    "Экспорт выбранного диапазона"
+  ],
+  "Exportando mensagens": [
+    "Exporting messages",
+    "Экспорт сообщений"
+  ],
+  "Exportar mensagens da tabela": [
+    "Export table messages",
+    "Экспорт сообщений таблицы"
+  ],
+  "Salvando tabela": [
+    "Saving table",
+    "Сохранение таблицы"
+  ],
+  "A tabela esta vazia": [
+    "The table is empty",
+    "Таблица пуста"
+  ],
+  "Importar arquivo para topico": [
+    "Import a file into a topic",
+    "Импорт файла в топик"
+  ],
+  "O arquivo JSONL exportado preserva binarios, tombstones e headers.": [
+    "Exported JSONL preserves binary data, tombstones and headers.",
+    "Экспортированный JSONL сохраняет двоичные данные, tombstone-сообщения и заголовки."
+  ],
+  "Abrir arquivo": [
+    "Open file",
+    "Открыть файл"
+  ],
+  "Validar e importar": [
+    "Validate and import",
+    "Проверить и импортировать"
+  ],
+  "Validando arquivo de importacao": [
+    "Validating import file",
+    "Проверка файла импорта"
+  ],
+  "Replay para outro topico": [
+    "Replay to another topic",
+    "Перенос в другой топик"
+  ],
+  "Le o snapshot da origem e aguarda a confirmacao de cada envio.": [
+    "Reads a source snapshot and waits for acknowledgement of each delivery.",
+    "Читает снимок источника и ожидает подтверждения каждой отправки."
+  ],
+  "Executar replay": [
+    "Run replay",
+    "Начать перенос"
+  ],
+  "Executando replay": [
+    "Replaying messages",
+    "Перенос сообщений"
+  ],
+  "Buscar em topicos e particoes": [
+    "Search topics and partitions",
+    "Поиск по топикам и разделам"
+  ],
+  "Texto ou expressao regular": [
+    "Text or regular expression",
+    "Текст или регулярное выражение"
+  ],
+  "Regex": [
+    "Regex",
+    "Регулярное выражение"
+  ],
+  "Diferenciar maiusculas": [
+    "Case sensitive",
+    "Учитывать регистр"
+  ],
+  "Chaves": [
+    "Keys",
+    "Ключи"
+  ],
+  "Valores": [
+    "Values",
+    "Значения"
+  ],
+  "Headers": [
+    "Headers",
+    "Заголовки"
+  ],
+  "Buscar no Kafka": [
+    "Search Kafka",
+    "Найти в Kafka"
+  ],
+  "{0} resultados. Abra a aba Mensagens para inspecionar, salvar ou reenviar.": [
+    "Results: {0}. Open Messages to inspect, save or resend.",
+    "Результатов: {0}. Откройте вкладку сообщений для просмотра, сохранения или повторной отправки."
+  ],
+  "Ver resultados": [
+    "View results",
+    "Показать результаты"
+  ],
+  "{0} / particao {1} / offset {2}": [
+    "{0} / partition {1} / offset {2}",
+    "{0} / раздел {1} / смещение {2}"
+  ],
+  "Arquivo de destino": [
+    "Destination file",
+    "Целевой файл"
+  ],
+  "Escolher local...": [
+    "Choose location...",
+    "Выбрать расположение..."
+  ],
+  "Salvar": [
+    "Save",
+    "Сохранить"
+  ],
+  "Cancelar": [
+    "Cancel",
+    "Отмена"
+  ],
+  "Salvando mensagem": [
+    "Saving message",
+    "Сохранение сообщения"
+  ],
+  "Configuracao do cluster": [
+    "Cluster settings",
+    "Настройки кластера"
+  ],
+  "Nome": [
+    "Name",
+    "Имя"
+  ],
+  "Bootstrap servers": [
+    "Bootstrap servers",
+    "Начальные брокеры"
+  ],
+  "Usuario": [
+    "Username",
+    "Имя пользователя"
+  ],
+  "Senha (sessao)": [
+    "Password (session only)",
+    "Пароль (только сеанс)"
+  ],
+  "Variavel de ambiente da senha": [
+    "Password environment variable",
+    "Переменная окружения пароля"
+  ],
+  "CA PEM (opcional)": [
+    "CA PEM (optional)",
+    "CA PEM (необязательно)"
+  ],
+  "Certificado cliente PEM": [
+    "Client certificate PEM",
+    "Сертификат клиента PEM"
+  ],
+  "Chave cliente PEM": [
+    "Client private key PEM",
+    "Закрытый ключ клиента PEM"
+  ],
+  "Avro / Schema Registry": [
+    "Avro / Schema Registry",
+    "Avro / Реестр схем"
+  ],
+  "URL do registry": [
+    "Registry URL",
+    "URL реестра"
+  ],
+  "Usuario do registry": [
+    "Registry username",
+    "Имя пользователя реестра"
+  ],
+  "Senha do registry (sessao)": [
+    "Registry password (session only)",
+    "Пароль реестра (только сеанс)"
+  ],
+  "Variavel da senha do registry": [
+    "Registry password environment variable",
+    "Переменная окружения пароля реестра"
+  ],
+  "Schema Avro local (opcional)": [
+    "Local Avro schema (optional)",
+    "Локальная схема Avro (необязательно)"
+  ],
+  "Propriedades Kafka adicionais (JSON)": [
+    "Additional Kafka properties (JSON)",
+    "Дополнительные свойства Kafka (JSON)"
+  ],
+  "Senhas digitadas ficam apenas na sessao; use variaveis de ambiente para reaproveitar credenciais.": [
+    "Entered passwords remain in this session only; use environment variables to reuse credentials.",
+    "Введённые пароли хранятся только в текущем сеансе; для повторного использования задайте переменные окружения."
+  ],
+  "Salvar cluster": [
+    "Save cluster",
+    "Сохранить кластер"
+  ],
+  "Cluster salvo": [
+    "Cluster saved",
+    "Кластер сохранён"
+  ],
+  "Propriedades invalidas: {0}": [
+    "Invalid properties: {0}",
+    "Недопустимые свойства: {0}"
+  ],
+  "Explorar • inspecionar • reproduzir": [
+    "Explore • inspect • replay",
+    "Обзор • просмотр • перенос"
+  ],
+  "{0} examinadas / {1} resultados / {2} confirmadas": [
+    "Scanned: {0} / results: {1} / acknowledged: {2}",
+    "Просмотрено: {0} / результатов: {1} / подтверждено: {2}"
+  ],
+  "Historico de operacoes": [
+    "Operation history",
+    "История операций"
+  ],
+  "Erro de decodificacao: {0}\n\nBytes (base64): {1}": [
+    "Decoding error: {0}\n\nBytes (base64): {1}",
+    "Ошибка декодирования: {0}\n\nБайты (base64): {1}"
+  ],
+  "(vazio)": [
+    "(empty)",
+    "(пусто)"
+  ],
+  "[binario, {0} B] {1}": [
+    "[binary, {0} B] {1}",
+    "[двоичные данные, {0} Б] {1}"
+  ],
+  "Texto UTF-8": [
+    "UTF-8 text",
+    "Текст UTF-8"
+  ],
+  "Avro JSON": [
+    "Avro JSON",
+    "Avro JSON"
+  ],
+  "Base64 invalido": [
+    "Invalid Base64",
+    "Недопустимый Base64"
+  ],
+  "Hex invalido": [
+    "Invalid hex",
+    "Недопустимое шестнадцатеричное значение"
+  ],
+  "Codificacao invalida": [
+    "Invalid encoding",
+    "Недопустимая кодировка"
+  ],
+  "Particao invalida": [
+    "Invalid partition",
+    "Недопустимый раздел"
+  ],
+  "Timestamp invalido": [
+    "Invalid timestamp",
+    "Недопустимая метка времени"
+  ],
+  "Schema id invalido": [
+    "Invalid schema ID",
+    "Недопустимый ID схемы"
+  ],
+  "Headers JSON invalidos": [
+    "Invalid JSON headers",
+    "Недопустимые заголовки JSON"
+  ],
+  "Header sem key": [
+    "Header has no key",
+    "У заголовка отсутствует key"
+  ],
+  "Header value_base64 deve ser string ou null": [
+    "Header value_base64 must be a string or null",
+    "Поле заголовка value_base64 должно быть строкой или null"
+  ],
+  "Kafka nao confirmou uma mensagem: {0}. Em timeout, verifique o destino antes de repetir": [
+    "Kafka did not acknowledge a message: {0}. After a timeout, check the destination before retrying",
+    "Kafka не подтвердил сообщение: {0}. После тайм-аута проверьте целевой топик перед повторной попыткой"
+  ],
+  "Falha ao enfileirar mensagem; operacao parcial": [
+    "Could not queue message; operation partially completed",
+    "Не удалось поставить сообщение в очередь; операция выполнена частично"
+  ],
+  "{0}; {1} mensagens confirmadas. Verifique o destino antes de repetir": [
+    "{0}; acknowledged messages: {1}. Check the destination before retrying",
+    "{0}; подтверждено сообщений: {1}. Проверьте целевой топик перед повторной попыткой"
+  ],
+  "Informe bootstrap servers": [
+    "Enter bootstrap servers",
+    "Укажите начальные брокеры"
+  ],
+  "Protocolo de seguranca invalido": [
+    "Invalid security protocol",
+    "Недопустимый протокол безопасности"
+  ],
+  "Use PLAIN ou SCRAM": [
+    "Use PLAIN or SCRAM",
+    "Используйте PLAIN или SCRAM"
+  ],
+  "Informe o usuario SASL": [
+    "Enter the SASL username",
+    "Укажите имя пользователя SASL"
+  ],
+  "Variavel de ambiente da senha SASL ausente": [
+    "SASL password environment variable is missing",
+    "Переменная окружения пароля SASL отсутствует"
+  ],
+  "Nao foi possivel criar o cliente Kafka": [
+    "Could not create Kafka client",
+    "Не удалось создать клиент Kafka"
+  ],
+  "Falha ao conectar ao cluster": [
+    "Could not connect to cluster",
+    "Не удалось подключиться к кластеру"
+  ],
+  "Grupos nao puderam ser listados: {0}": [
+    "Could not list groups: {0}",
+    "Не удалось получить список групп: {0}"
+  ],
+  "Selecione um consumer group": [
+    "Select a consumer group",
+    "Выберите группу потребителей"
+  ],
+  "Falha ao ler offsets do grupo": [
+    "Could not read group offsets",
+    "Не удалось прочитать смещения группы"
+  ],
+  "Erro de offset na particao": [
+    "Partition offset error",
+    "Ошибка смещения раздела"
+  ],
+  "Topico nao encontrado": [
+    "Topic not found",
+    "Топик не найден"
+  ],
+  "Topico {0} indisponivel: {1}": [
+    "Topic {0} unavailable: {1}",
+    "Топик {0} недоступен: {1}"
+  ],
+  "Selecione um ou mais topicos": [
+    "Select one or more topics",
+    "Выберите один или несколько топиков"
+  ],
+  "Limites de leitura precisam ser positivos": [
+    "Read limits must be positive",
+    "Ограничения чтения должны быть положительными"
+  ],
+  "Cliente de leitura interrompido": [
+    "Reader interrupted",
+    "Клиент чтения прерван"
+  ],
+  "Falha ao encerrar a faixa de leitura": [
+    "Could not finish read range",
+    "Не удалось завершить диапазон чтения"
+  ],
+  "Particao solicitada nao existe em {0}": [
+    "Requested partition does not exist in {0}",
+    "Запрошенный раздел отсутствует в {0}"
+  ],
+  "Cancelado antes da leitura": [
+    "Cancelled before reading",
+    "Отменено до начала чтения"
+  ],
+  "Offset precisa ser positivo": [
+    "Offset must be non-negative",
+    "Смещение не должно быть отрицательным"
+  ],
+  "Particao sem resposta de timestamp": [
+    "No timestamp response for partition",
+    "Нет ответа с меткой времени для раздела"
+  ],
+  "Cancelado; resultado parcial": [
+    "Cancelled; partial result",
+    "Отменено; частичный результат"
+  ],
+  "Tempo limite atingido; resultado parcial": [
+    "Timed out; partial result",
+    "Время ожидания истекло; частичный результат"
+  ],
+  "Limite de mensagens examinadas atingido": [
+    "Scan limit reached",
+    "Достигнут предел просмотра сообщений"
+  ],
+  "Limite de resultados atingido": [
+    "Result limit reached",
+    "Достигнут предел результатов"
+  ],
+  "Falha na leitura Kafka; operacao nao concluida": [
+    "Kafka read failed; operation incomplete",
+    "Ошибка чтения Kafka; операция не завершена"
+  ],
+  "Lendo snapshot de offsets": [
+    "Reading offset snapshot",
+    "Чтение снимка смещений"
+  ],
+  "Snapshot lido ate o fim": [
+    "Snapshot read to the end",
+    "Снимок прочитан до конца"
+  ],
+  "A leitura ultrapassou 128 MiB. Reduza a faixa ou use exportacao, que grava os dados em fluxo.": [
+    "Read exceeded 128 MiB. Reduce the range or use streaming export.",
+    "Объём чтения превысил 128 МиБ. Уменьшите диапазон или используйте потоковый экспорт."
+  ],
+  "Informe o texto ou regex da busca": [
+    "Enter search text or a regular expression",
+    "Введите текст поиска или регулярное выражение"
+  ],
+  "Escolha onde procurar": [
+    "Choose where to search",
+    "Выберите область поиска"
+  ],
+  "Regex invalida": [
+    "Invalid regular expression",
+    "Недопустимое регулярное выражение"
+  ],
+  "Os resultados ultrapassaram 128 MiB. Reduza a faixa ou refine a busca.": [
+    "Results exceeded 128 MiB. Reduce the range or refine the search.",
+    "Объём результатов превысил 128 МиБ. Уменьшите диапазон или уточните поиск."
+  ],
+  "Informe o topico de destino": [
+    "Enter the destination topic",
+    "Укажите целевой топик"
+  ],
+  "Particao {0} nao existe no destino": [
+    "Partition {0} does not exist at the destination",
+    "Раздел {0} отсутствует в целевом топике"
+  ],
+  "Kafka nao confirmou a mensagem: {0}. Em timeout, verifique o destino antes de repetir.": [
+    "Kafka did not acknowledge the message: {0}. After a timeout, check the destination before retrying.",
+    "Kafka не подтвердил сообщение: {0}. После тайм-аута проверьте целевой топик перед повторной попыткой."
+  ],
+  "Limite de resultados": [
+    "Result limit",
+    "Предел результатов"
+  ],
+  "{0} registros salvos em {1}. {2}": [
+    "Records saved: {0}, file: {1}. {2}",
+    "Сохранено записей: {0}, файл: {1}. {2}"
+  ],
+  "Exportacao interrompida; prefixo preservado em {0}": [
+    "Export interrupted; completed prefix preserved in {0}",
+    "Экспорт прерван; записанная часть сохранена в {0}"
+  ],
+  "Particao {0} do arquivo nao existe no destino": [
+    "Archive partition {0} does not exist at the destination",
+    "Раздел {0} из архива отсутствует в целевом топике"
+  ],
+  "Importacao cancelada antes de publicar": [
+    "Import cancelled before publishing",
+    "Импорт отменён до отправки"
+  ],
+  "Arquivo nao contem mensagens": [
+    "File contains no messages",
+    "Файл не содержит сообщений"
+  ],
+  "Importando {0}/{1}": [
+    "Importing {0}/{1}",
+    "Импорт {0}/{1}"
+  ],
+  "Importacao parcial: {0} de {1} mensagens confirmadas": [
+    "Partial import: {0} of {1} messages acknowledged",
+    "Частичный импорт: подтверждено сообщений {0} из {1}"
+  ],
+  "{0} de {1} mensagens confirmadas{2}": [
+    "Acknowledged messages: {0} of {1}{2}",
+    "Подтверждено сообщений: {0} из {1}{2}"
+  ],
+  "; cancelado": [
+    "; cancelled",
+    "; отменено"
+  ],
+  "Replay exige um topico de destino diferente da origem": [
+    "Replay requires a destination topic different from the source",
+    "Для переноса целевой топик должен отличаться от исходного"
+  ],
+  "Destino nao possui todas as particoes selecionadas": [
+    "Destination does not contain all selected partitions",
+    "В целевом топике отсутствуют некоторые выбранные разделы"
+  ],
+  "Reproduzindo no destino": [
+    "Replaying to destination",
+    "Перенос в целевой топик"
+  ],
+  "Replay parcial: {0} mensagens confirmadas": [
+    "Partial replay: messages acknowledged: {0}",
+    "Частичный перенос: подтверждено сообщений: {0}"
+  ],
+  "{0} mensagens confirmadas no destino. {1}": [
+    "Messages acknowledged at destination: {0}. {1}",
+    "Сообщений подтверждено в целевом топике: {0}. {1}"
+  ],
+  "Falha ao criar fixture: {0}": [
+    "Could not create test fixture: {0}",
+    "Не удалось создать тестовые данные: {0}"
+  ],
+  "A fixture foi criada, mas seus metadados nao ficaram disponiveis a tempo": [
+    "Test fixture was created, but metadata was not available in time",
+    "Тестовые данные созданы, но метаданные не появились вовремя"
+  ],
+  "Numero de particoes da fixture ainda nao corresponde ao solicitado": [
+    "Test fixture partition count does not yet match the request",
+    "Число разделов тестового топика пока не соответствует запрошенному"
+  ],
+  "null (tombstone)": [
+    "null (tombstone)",
+    "null (tombstone)"
+  ],
+  "Configure o schema local para Avro bruto": [
+    "Configure a local schema for raw Avro",
+    "Задайте локальную схему для Avro без заголовка"
+  ],
+  "Bytes adicionais depois do datum Avro bruto": [
+    "Extra bytes after raw Avro datum",
+    "Лишние байты после данных Avro без заголовка"
+  ],
+  "[binario, {0} bytes]\n{1}": [
+    "[binary, {0} bytes]\n{1}",
+    "[двоичные данные, {0} байт]\n{1}"
+  ],
+  "Dados nao sao UTF-8; selecione Hex ou Base64": [
+    "Data is not UTF-8; select Hex or Base64",
+    "Данные не в UTF-8; выберите Hex или Base64"
+  ],
+  "JSON invalido": [
+    "Invalid JSON",
+    "Недопустимый JSON"
+  ],
+  "Avro binario exige um schema local ou Schema Registry": [
+    "Binary Avro requires a local schema or Schema Registry",
+    "Для двоичного Avro нужна локальная схема или реестр схем"
+  ],
+  "Payload Avro invalido": [
+    "Invalid Avro payload",
+    "Недопустимые данные Avro"
+  ],
+  "Bytes adicionais depois do datum Avro": [
+    "Extra bytes after Avro datum",
+    "Лишние байты после данных Avro"
+  ],
+  "Mensagem usa Schema Registry (id {0}); configure a URL do registry": [
+    "Message uses Schema Registry (ID {0}); configure the registry URL",
+    "Сообщение использует реестр схем (ID {0}); задайте URL реестра"
+  ],
+  "Resposta do registry sem schema": [
+    "Registry response has no schema",
+    "Ответ реестра не содержит схему"
+  ],
+  "Schema Avro vazio": [
+    "Empty Avro schema",
+    "Пустая схема Avro"
+  ],
+  "Variavel da senha do registry ausente": [
+    "Registry password environment variable is missing",
+    "Переменная окружения пароля реестра отсутствует"
+  ],
+  "Falha ao acessar Schema Registry": [
+    "Could not access Schema Registry",
+    "Не удалось обратиться к реестру схем"
+  ],
+  "Schema do registry nao e Avro": [
+    "Registry schema is not Avro",
+    "Схема в реестре имеет формат, отличный от Avro"
+  ],
+  "Referencia Avro sem subject": [
+    "Avro reference has no subject",
+    "В ссылке Avro отсутствует subject"
+  ],
+  "Referencia Avro sem version": [
+    "Avro reference has no version",
+    "В ссылке Avro отсутствует version"
+  ],
+  "Schema Avro tem mais de 64 referencias": [
+    "Avro schema has more than 64 references",
+    "Схема Avro содержит более 64 ссылок"
+  ],
+  "URL do registry invalida": [
+    "Invalid registry URL",
+    "Недопустимый URL реестра"
+  ],
+  "Referencia Avro sem schema": [
+    "Avro reference has no schema",
+    "В ссылке Avro отсутствует схема"
+  ],
+  "Informe schema local ou id do registry": [
+    "Enter a local schema or registry ID",
+    "Укажите локальную схему или ID в реестре"
+  ],
+  "O schema local difere do schema registrado para o id {0}": [
+    "Local schema differs from the registered schema for ID {0}",
+    "Локальная схема отличается от зарегистрированной схемы с ID {0}"
+  ],
+  "JSON nao corresponde ao schema Avro": [
+    "JSON does not match the Avro schema",
+    "JSON не соответствует схеме Avro"
+  ],
+  "XML invalido": [
+    "Invalid XML",
+    "Недопустимый XML"
+  ],
+  "Formato de arquivo desconhecido: {0}": [
+    "Unknown archive format: {0}",
+    "Неизвестный формат архива: {0}"
+  ],
+  "Particao e offset de origem invalidos": [
+    "Invalid source partition or offset",
+    "Недопустимый исходный раздел или смещение"
+  ],
+  "Base64 invalido no arquivo": [
+    "Invalid Base64 in archive",
+    "Недопустимый Base64 в архиве"
+  ],
+  "Linha JSON invalida": [
+    "Invalid JSON line",
+    "Недопустимая строка JSON"
+  ],
+  "Nao foi possivel abrir o arquivo": [
+    "Could not open file",
+    "Не удалось открыть файл"
+  ],
+  "Linha {0} excede 64 MiB": [
+    "Line {0} exceeds 64 MiB",
+    "Строка {0} превышает 64 МиБ"
+  ],
+  "Erro na linha {0}": [
+    "Error on line {0}",
+    "Ошибка в строке {0}"
+  ],
+  "Pasta de destino nao existe": [
+    "Destination folder does not exist",
+    "Целевая папка не существует"
+  ],
+  "Valor null: use o arquivo JSONL para preservar um tombstone": [
+    "Null value: use JSONL to preserve a tombstone",
+    "Значение null: используйте JSONL для сохранения tombstone-сообщения"
+  ],
+  "Pasta de configuracao indisponivel": [
+    "Configuration folder unavailable",
+    "Папка настроек недоступна"
+  ],
+  "Configuracao de clusters invalida": [
+    "Invalid cluster configuration",
+    "Недопустимые настройки кластеров"
+  ],
+  "Use o campo de senha ou uma variavel de ambiente; propriedades sensiveis nao sao salvas": [
+    "Use the password field or an environment variable; sensitive properties are not saved",
+    "Используйте поле пароля или переменную окружения; конфиденциальные свойства не сохраняются"
+  ],
+  "Caminho de configuracao invalido": [
+    "Invalid configuration path",
+    "Недопустимый путь настроек"
+  ],
+  "Idioma": [
+    "Language",
+    "Язык"
+  ],
+  "Idioma alterado": [
+    "Language changed",
+    "Язык изменён"
+  ],
+  "Preferencias invalidas": [
+    "Invalid preferences",
+    "Недопустимые настройки интерфейса"
+  ],
+  "Nao foi possivel salvar o idioma: {0}": [
+    "Could not save language preference: {0}",
+    "Не удалось сохранить язык: {0}"
+  ]
+}

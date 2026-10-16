@@ -18,9 +18,9 @@ Aplicativo desktop em Rust para explorar Kafka no Windows e no Linux, inspirado 
 
 ## Baixar para Windows
 
-[**Download para Windows x64**](https://github.com/rgt001/kafune-kafka/releases/download/v0.3.0/kafunekafka-v0.3.0-windows-x64.zip) · [Linux x64](https://github.com/rgt001/kafune-kafka/releases/download/v0.3.0/kafunekafka-v0.3.0-linux-x64.tar.gz) · [English](README.md)
+[**Download para Windows x64**](https://github.com/rgt001/kafune-kafka/releases/download/v0.4.0/kafunekafka-v0.4.0-windows-x64.zip) · [Linux x64](https://github.com/rgt001/kafune-kafka/releases/download/v0.4.0/kafunekafka-v0.4.0-linux-x64.tar.gz) · [English](README.md) · [Русский](README.ru.md)
 
-Na página do repositório no GitHub, abra **Releases** e baixe `kafunekafka-v0.3.0-windows-x64.zip`. Extraia todo o ZIP e execute `kafunekafka.exe`, mantendo as DLLs na mesma pasta. Não precisa instalar Rust, Java ou o Offset Explorer. Docker serve apenas aos testes locais; o aplicativo se conecta ao Kafka pelos bootstrap servers configurados.
+Na página do repositório no GitHub, abra **Releases** e baixe `kafunekafka-v0.4.0-windows-x64.zip`. Extraia todo o ZIP e execute `kafunekafka.exe`, mantendo as DLLs na mesma pasta. Não precisa instalar Rust, Java ou o Offset Explorer. Docker serve apenas aos testes locais; o aplicativo se conecta ao Kafka pelos bootstrap servers configurados.
 
 Cada release inclui o ZIP, seu arquivo SHA-256, documentação e licenças das dependências. As credenciais e conexões do usuário não fazem parte do download. O código-fonte fica no Git; os executáveis ficam nos assets de cada release.
 
@@ -44,6 +44,10 @@ O pacote Linux foi compilado e testado no Ubuntu 22.04 pelo WSL (glibc 2.35). Ex
 | 12 | Executáveis nativos para Windows e Linux | Builds abaixo |
 
 ## Uso
+
+A interface oferece **Português, English e Русский**. Troque pelo seletor de idioma no canto superior direito; a escolha é aplicada imediatamente e fica salva após fechar o aplicativo. Português continua como padrão. O idioma fica em `settings.json`, ao lado das conexões, sem alterar o arquivo de clusters.
+
+`KAFUNEKAFKA_LANGUAGE=en`, `ru` ou `pt-BR` permite uma escolha temporária. Os dados Kafka e nomes informados pelo usuário são preservados. O histórico mantém o idioma de cada operação e os botões dos diálogos nativos seguem o idioma do sistema.
 
 1. Cadastre os clusters em **Novo**. Preencha os bootstrap servers e, quando necessário, TLS, SASL/PLAIN ou SCRAM. Credenciais digitadas permanecem na sessão; um nome de variável de ambiente permite reaproveitá-las sem salvar a senha em disco.
 2. Clique em **Conectar / atualizar todos**. A interface mostra os clusters cadastrados e mantém as tarefas Kafka fora da thread gráfica.
@@ -160,8 +164,8 @@ O pacote portátil e o checksum são gerados em `dist/`. O script localiza o run
 O workflow `.github/workflows/windows-release.yml` compila no Windows, executa formatação, clippy e testes unitários e prepara o ZIP. Para publicar a versão, atualize `Cargo.toml`, `Cargo.lock` e `RELEASE-NOTES.md` e envie a tag correspondente:
 
 ```powershell
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 O workflow confere a tag contra a versão do Cargo antes de anexar o ZIP e o SHA-256 à release. Também pode ser executado manualmente em **Actions → Windows release** para gerar somente os artefatos. Os testes com Kafka real são executados separadamente com o ambiente Docker descrito acima.

@@ -1,4 +1,5 @@
 use crate::model::{ClusterProfile, KafkaRecord, RecordHeader};
+use crate::{i18n::tr, tf};
 use anyhow::{Context, Result, bail, ensure};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
@@ -52,15 +53,14 @@ impl TryFrom<ArchiveRecord> for KafkaRecord {
     fn try_from(r: ArchiveRecord) -> Result<Self> {
         ensure!(
             r.format == "kafunekafka.record.v1",
-            "Formato de arquivo desconhecido: {}",
-            r.format
+            tf!("Formato de arquivo desconhecido: {0}", r.format)
         );
         ensure!(
             r.partition >= 0 && r.offset >= 0,
-            "Particao e offset de origem invalidos"
+            tr("Particao e offset de origem invalidos")
         );
         let decode = |s: Option<String>| -> Result<Option<Vec<u8>>> {
-            s.map(|v| STANDARD.decode(v).context("Base64 invalido no arquivo"))
+            s.map(|v| STANDARD.decode(v).context(tr("Base64 invalido no arquivo")))
                 .transpose()
         };
         Ok(Self {
@@ -91,7 +91,7 @@ pub fn write_record(writer: &mut impl Write, record: &KafkaRecord) -> Result<()>
 }
 pub fn parse_record(line: &str) -> Result<KafkaRecord> {
     KafkaRecord::try_from(
-        serde_json::from_str::<ArchiveRecord>(line).context("Linha JSON invalida")?,
+        serde_json::from_str::<ArchiveRecord>(line).context(tr("Linha JSON invalida"))?,
     )
 }
 
@@ -101,7 +101,7 @@ pub fn visit_archive(
 ) -> Result<usize> {
     let mut reader = BufReader::with_capacity(
         64 * 1024,
-        File::open(path).context("Nao foi possivel abrir o arquivo")?,
+        File::open(path).context(tr("Nao foi possivel abrir o arquivo"))?,
     );
     let mut count = 0;
     let mut line = String::new();
@@ -116,13 +116,12 @@ pub fn visit_archive(
         let line = line.trim_end_matches(['\r', '\n']);
         ensure!(
             line.len() <= 64 * 1024 * 1024,
-            "Linha {} excede 64 MiB",
-            index
+            tf!("Linha {0} excede 64 MiB", index)
         );
         if line.trim().is_empty() {
             continue;
         }
-        let record = parse_record(line).with_context(|| format!("Erro na linha {index}"))?;
+        let record = parse_record(line).with_context(|| tf!("Erro na linha {0}", index))?;
         count += 1;
         if !visit(record)? {
             break;
@@ -149,7 +148,7 @@ impl AtomicArchive {
             .parent()
             .filter(|p| !p.as_os_str().is_empty())
             .unwrap_or(Path::new("."));
-        ensure!(parent.is_dir(), "Pasta de destino nao existe");
+        ensure!(parent.is_dir(), tr("Pasta de destino nao existe"));
         Ok(Self {
             temp: BufWriter::with_capacity(256 * 1024, tempfile::NamedTempFile::new_in(parent)?),
             destination: path.to_owned(),
@@ -189,7 +188,9 @@ impl AtomicArchive {
 }
 
 pub fn save_raw(path: &Path, bytes: Option<&[u8]>) -> Result<()> {
-    let bytes = bytes.context("Valor null: use o arquivo JSONL para preservar um tombstone")?;
+    let bytes = bytes.context(tr(
+        "Valor null: use o arquivo JSONL para preservar um tombstone",
+    ))?;
     let parent = path
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -203,15 +204,15 @@ pub fn save_raw(path: &Path, bytes: Option<&[u8]>) -> Result<()> {
 
 pub fn profile_path() -> Result<PathBuf> {
     let dirs = directories::ProjectDirs::from("dev", "kafunekafka", "kafunekafka")
-        .context("Pasta de configuracao indisponivel")?;
+        .context(tr("Pasta de configuracao indisponivel"))?;
     Ok(dirs.config_dir().join("clusters.json"))
 }
 pub fn load_profiles(path: &Path) -> Result<Vec<ClusterProfile>> {
     if !path.exists() {
         return Ok(vec![]);
     }
-    let profiles =
-        serde_json::from_slice(&fs::read(path)?).context("Configuracao de clusters invalida")?;
+    let profiles = serde_json::from_slice(&fs::read(path)?)
+        .context(tr("Configuracao de clusters invalida"))?;
     Ok(profiles)
 }
 pub fn save_profiles(path: &Path, profiles: &[ClusterProfile]) -> Result<()> {
@@ -220,17 +221,43 @@ pub fn save_profiles(path: &Path, profiles: &[ClusterProfile]) -> Result<()> {
             if name.to_ascii_lowercase().contains("password")
                 || name.to_ascii_lowercase().contains("secret")
             {
-                bail!(
+                bail!(tr(
                     "Use o campo de senha ou uma variavel de ambiente; propriedades sensiveis nao sao salvas"
-                );
+                ));
             }
         }
     }
-    fs::create_dir_all(path.parent().context("Caminho de configuracao invalido")?)?;
+    fs::create_dir_all(
+        path.parent()
+            .context(tr("Caminho de configuracao invalido"))?,
+    )?;
     let mut temp = tempfile::NamedTempFile::new_in(path.parent().unwrap())?;
     serde_json::to_writer_pretty(temp.as_file_mut(), profiles)?;
     temp.as_file().sync_all()?;
     temp.persist(path).map_err(|e| e.error)?;
+    Ok(())
+}
+
+pub fn load_settings(path: &Path) -> Result<crate::i18n::UiSettings> {
+    match fs::read(path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).context(tr("Preferencias invalidas")),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Ok(crate::i18n::UiSettings::default())
+        }
+        Err(error) => Err(error).context(tr("Preferencias invalidas")),
+    }
+}
+
+pub fn save_settings(path: &Path, settings: &crate::i18n::UiSettings) -> Result<()> {
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    fs::create_dir_all(parent)?;
+    let mut temp = tempfile::NamedTempFile::new_in(parent)?;
+    serde_json::to_writer_pretty(temp.as_file_mut(), settings)?;
+    temp.as_file().sync_all()?;
+    temp.persist(path).map_err(|error| error.error)?;
     Ok(())
 }
 

@@ -3,6 +3,7 @@ use crate::{
     model::*,
     storage,
 };
+use crate::{i18n::tr, tf};
 use anyhow::{Context, Result, bail, ensure};
 use rdkafka::{
     ClientConfig, ClientContext, Message, Offset, TopicPartitionList,
@@ -115,9 +116,10 @@ impl DeliveryWindow {
         let state = self.state.lock().unwrap();
         self.delivered = state.delivered;
         if let Some(error) = &state.error {
-            bail!(
-                "Kafka nao confirmou uma mensagem: {error}. Em timeout, verifique o destino antes de repetir"
-            );
+            bail!(tf!(
+                "Kafka nao confirmou uma mensagem: {0}. Em timeout, verifique o destino antes de repetir",
+                error
+            ));
         }
         Ok(())
     }
@@ -174,7 +176,7 @@ impl DeliveryWindow {
                     self.poll(Duration::from_millis(10))?
                 }
                 Err((e, _)) => {
-                    return Err(e).context("Falha ao enfileirar mensagem; operacao parcial");
+                    return Err(e).context(tr("Falha ao enfileirar mensagem; operacao parcial"));
                 }
             }
         }
@@ -189,10 +191,11 @@ impl DeliveryWindow {
         self.delivered = state.delivered;
         self.receipts = std::mem::take(&mut state.receipts);
         if let Some(error) = &state.error {
-            bail!(
-                "{error}; {} mensagens confirmadas. Verifique o destino antes de repetir",
+            bail!(tf!(
+                "{0}; {1} mensagens confirmadas. Verifique o destino antes de repetir",
+                error,
                 self.delivered
-            );
+            ));
         }
         Ok(())
     }
@@ -216,12 +219,12 @@ impl Backend {
         let p = &self.profile;
         ensure!(
             !p.bootstrap_servers.trim().is_empty(),
-            "Informe bootstrap servers"
+            tr("Informe bootstrap servers")
         );
         ensure!(
             ["PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"]
                 .contains(&p.security_protocol.as_str()),
-            "Protocolo de seguranca invalido"
+            tr("Protocolo de seguranca invalido")
         );
         let mut config = ClientConfig::new();
         config
@@ -235,14 +238,14 @@ impl Backend {
         if p.security_protocol.starts_with("SASL") {
             ensure!(
                 ["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"].contains(&p.sasl_mechanism.as_str()),
-                "Use PLAIN ou SCRAM"
+                tr("Use PLAIN ou SCRAM")
             );
-            ensure!(!p.username.is_empty(), "Informe o usuario SASL");
+            ensure!(!p.username.is_empty(), tr("Informe o usuario SASL"));
             let password = if p.password_env.is_empty() {
                 p.password.clone()
             } else {
                 std::env::var(&p.password_env)
-                    .context("Variavel de ambiente da senha SASL ausente")?
+                    .context(tr("Variavel de ambiente da senha SASL ausente"))?
             };
             config
                 .set("sasl.mechanism", &p.sasl_mechanism)
@@ -281,13 +284,13 @@ impl Backend {
             .set("fetch.wait.max.ms", "10");
         config
             .create()
-            .context("Nao foi possivel criar o cliente Kafka")
+            .context(tr("Nao foi possivel criar o cliente Kafka"))
     }
     pub fn snapshot(&self) -> Result<ClusterSnapshot> {
         let consumer = self.consumer(None)?;
         let meta = consumer
             .fetch_metadata(None, Duration::from_secs(10))
-            .context("Falha ao conectar ao cluster")?;
+            .context(tr("Falha ao conectar ao cluster"))?;
         let brokers = meta
             .brokers()
             .iter()
@@ -347,12 +350,12 @@ impl Backend {
             }
             Err(e) => snapshot
                 .warnings
-                .push(format!("Grupos nao puderam ser listados: {e}")),
+                .push(tf!("Grupos nao puderam ser listados: {0}", e)),
         }
         Ok(snapshot)
     }
     pub fn group_offsets(&self, group: &str, topics: &[String]) -> Result<Vec<GroupOffset>> {
-        ensure!(!group.is_empty(), "Selecione um consumer group");
+        ensure!(!group.is_empty(), tr("Selecione um consumer group"));
         let consumer = self.consumer(Some(group))?;
         let metadata = consumer.fetch_metadata(None, Duration::from_secs(10))?;
         let mut requested = TopicPartitionList::new();
@@ -369,10 +372,10 @@ impl Backend {
         }
         let committed = consumer
             .committed_offsets(requested, Duration::from_secs(10))
-            .context("Falha ao ler offsets do grupo")?;
+            .context(tr("Falha ao ler offsets do grupo"))?;
         let mut result = vec![];
         for entry in committed.elements() {
-            entry.error().context("Erro de offset na particao")?;
+            entry.error().context(tr("Erro de offset na particao"))?;
             let offset = match entry.offset() {
                 Offset::Offset(n) if n >= 0 => Some(n),
                 _ => None,
@@ -400,11 +403,14 @@ impl Backend {
             .topics()
             .iter()
             .find(|t| t.name() == topic)
-            .context("Topico nao encontrado")?;
+            .context(tr("Topico nao encontrado"))?;
         ensure!(
             entry.error().is_none(),
-            "Topico {topic} indisponivel: {:?}",
-            entry.error()
+            tf!(
+                "Topico {0} indisponivel: {1}",
+                topic,
+                format!("{:?}", entry.error())
+            )
         );
         Ok(entry.partitions().iter().map(|p| p.id()).collect())
     }
@@ -437,10 +443,13 @@ impl Backend {
         mut visit: impl FnMut(&BorrowedMessage<'_>) -> Result<bool>,
     ) -> Result<OperationReport> {
         let trace = crate::perf::Trace::new("scan");
-        ensure!(!options.topics.is_empty(), "Selecione um ou mais topicos");
+        ensure!(
+            !options.topics.is_empty(),
+            tr("Selecione um ou mais topicos")
+        );
         ensure!(
             options.max_messages > 0 && options.max_scanned > 0 && options.timeout_seconds > 0,
-            "Limites de leitura precisam ser positivos"
+            tr("Limites de leitura precisam ser positivos")
         );
         // One bounded reader per backend. Re-resolve credentials on every read;
         // never reuse a client whose effective configuration has changed.
@@ -453,7 +462,7 @@ impl Backend {
         let mut reader = self
             .reader
             .lock()
-            .map_err(|_| anyhow::anyhow!("Cliente de leitura interrompido"))?;
+            .map_err(|_| anyhow::anyhow!(tr("Cliente de leitura interrompido")))?;
         if reader
             .as_ref()
             .is_none_or(|session| session.config != values)
@@ -486,7 +495,7 @@ impl Backend {
             trace.mark("failed_consumer_dropped");
         }
         let report = result?;
-        cleanup.context("Falha ao encerrar a faixa de leitura")?;
+        cleanup.context(tr("Falha ao encerrar a faixa de leitura"))?;
         Ok(report)
     }
     #[allow(clippy::too_many_arguments)]
@@ -509,7 +518,7 @@ impl Backend {
             if !options.partitions.is_empty() {
                 ensure!(
                     options.partitions.iter().all(|p| partitions.contains(p)),
-                    "Particao solicitada nao existe em {topic}"
+                    tf!("Particao solicitada nao existe em {0}", topic)
                 );
             }
             for p in partitions
@@ -519,7 +528,7 @@ impl Backend {
                 if cancel.load(Ordering::Relaxed) {
                     return Ok(OperationReport {
                         cancelled: true,
-                        message: "Cancelado antes da leitura".into(),
+                        message: tr("Cancelado antes da leitura").into(),
                         ..Default::default()
                     });
                 }
@@ -529,7 +538,7 @@ impl Backend {
                     StartPosition::Earliest => low,
                     StartPosition::Latest(n) => (high - n as i64).max(low),
                     StartPosition::Offset(n) => {
-                        ensure!(n >= 0, "Offset precisa ser positivo");
+                        ensure!(n >= 0, tr("Offset precisa ser positivo"));
                         n.max(low)
                     }
                     StartPosition::Timestamp(timestamp) => {
@@ -538,7 +547,7 @@ impl Backend {
                         let found = consumer.offsets_for_times(times, Duration::from_secs(5))?;
                         let entry = found
                             .find_partition(topic, p)
-                            .context("Particao sem resposta de timestamp")?;
+                            .context(tr("Particao sem resposta de timestamp"))?;
                         entry.error()?;
                         match entry.offset() {
                             Offset::Offset(n) if n >= 0 => n.max(low),
@@ -564,15 +573,15 @@ impl Backend {
         while finished.len() < bounds.len() {
             if cancel.load(Ordering::Relaxed) {
                 report.cancelled = true;
-                report.message = "Cancelado; resultado parcial".into();
+                report.message = tr("Cancelado; resultado parcial").into();
                 break;
             }
             if Instant::now() >= deadline {
-                report.message = "Tempo limite atingido; resultado parcial".into();
+                report.message = tr("Tempo limite atingido; resultado parcial").into();
                 break;
             }
             if report.scanned >= options.max_scanned {
-                report.message = "Limite de mensagens examinadas atingido".into();
+                report.message = tr("Limite de mensagens examinadas atingido").into();
                 break;
             }
             match consumer.poll(Duration::from_millis(100)) {
@@ -602,7 +611,7 @@ impl Backend {
                         finished.insert(key);
                     }
                     if report.matched >= options.max_messages {
-                        report.message = "Limite de resultados atingido".into();
+                        report.message = tr("Limite de resultados atingido").into();
                         break;
                     }
                 }
@@ -619,7 +628,7 @@ impl Backend {
                     }
                 }
                 Some(Err(e)) => {
-                    return Err(e).context("Falha na leitura Kafka; operacao nao concluida");
+                    return Err(e).context(tr("Falha na leitura Kafka; operacao nao concluida"));
                 }
                 None => (),
             }
@@ -628,14 +637,14 @@ impl Backend {
                     scanned: report.scanned,
                     matched: report.matched,
                     delivered: 0,
-                    phase: "Lendo snapshot de offsets".into(),
+                    phase: tr("Lendo snapshot de offsets").into(),
                 });
                 last_progress = Instant::now();
             }
         }
         report.complete = finished.len() == bounds.len();
         if report.complete && report.message.is_empty() {
-            report.message = "Snapshot lido ate o fim".into();
+            report.message = tr("Snapshot lido ate o fim").into();
         }
         progress(Progress {
             scanned: report.scanned,
@@ -656,7 +665,7 @@ impl Backend {
         let mut retained_bytes = 0usize;
         let report = self.scan(options, cancel, progress, |r| {
             retained_bytes += record_bytes(&r);
-            ensure!(retained_bytes <= 128 * 1024 * 1024, "A leitura ultrapassou 128 MiB. Reduza a faixa ou use exportacao, que grava os dados em fluxo.");
+            ensure!(retained_bytes <= 128 * 1024 * 1024, tr("A leitura ultrapassou 128 MiB. Reduza a faixa ou use exportacao, que grava os dados em fluxo."));
             records.push(r);
             Ok(true)
         })?;
@@ -671,11 +680,11 @@ impl Backend {
     ) -> Result<ScanResult> {
         ensure!(
             !search.pattern.is_empty(),
-            "Informe o texto ou regex da busca"
+            tr("Informe o texto ou regex da busca")
         );
         ensure!(
             search.keys || search.values || search.headers,
-            "Escolha onde procurar"
+            tr("Escolha onde procurar")
         );
         let pattern = if search.regex {
             search.pattern.clone()
@@ -686,7 +695,7 @@ impl Backend {
             .case_insensitive(!search.case_sensitive)
             .size_limit(10 * 1024 * 1024)
             .build()
-            .context("Regex invalida")?;
+            .context(tr("Regex invalida"))?;
         let mut decoder = Decoder::new(&self.profile)?;
         let mut records = vec![];
         let mut retained_bytes = 0usize;
@@ -716,7 +725,7 @@ impl Backend {
                 retained_bytes += record_bytes(&r);
                 ensure!(
                     retained_bytes <= 128 * 1024 * 1024,
-                    "Os resultados ultrapassaram 128 MiB. Reduza a faixa ou refine a busca."
+                    tr("Os resultados ultrapassaram 128 MiB. Reduza a faixa ou refine a busca.")
                 );
                 records.push(r);
             }
@@ -738,11 +747,14 @@ impl Backend {
         Ok(self.producer_config()?.create()?)
     }
     fn validate_destination(&self, topic: &str, partition: Option<i32>) -> Result<Vec<i32>> {
-        ensure!(!topic.trim().is_empty(), "Informe o topico de destino");
+        ensure!(!topic.trim().is_empty(), tr("Informe o topico de destino"));
         let consumer = self.consumer(None)?;
         let parts = self.partitions(&consumer, topic)?;
         if let Some(p) = partition {
-            ensure!(parts.contains(&p), "Particao {p} nao existe no destino");
+            ensure!(
+                parts.contains(&p),
+                tf!("Particao {0} nao existe no destino", p)
+            );
         }
         Ok(parts)
     }
@@ -752,7 +764,7 @@ impl Backend {
         r: &ProduceRecord,
     ) -> Result<(i32, i64)> {
         let message = future_record(r);
-        runtime.block_on(producer.send(message,Duration::from_secs(5))).map(|d|(d.partition,d.offset)).map_err(|(e,_)| anyhow::anyhow!("Kafka nao confirmou a mensagem: {e}. Em timeout, verifique o destino antes de repetir."))
+        runtime.block_on(producer.send(message,Duration::from_secs(5))).map(|d|(d.partition,d.offset)).map_err(|(e,_)| anyhow::anyhow!(tf!("Kafka nao confirmou a mensagem: {0}. Em timeout, verifique o destino antes de repetir.", e)))
     }
     pub fn send(&self, record: &ProduceRecord) -> Result<(i32, i64)> {
         self.validate_destination(&record.topic, record.partition)?;
@@ -777,14 +789,14 @@ impl Backend {
         match result {
             Ok(mut report) => {
                 let saved = if report.cancelled
-                    || !report.complete && !report.message.starts_with("Limite de resultados")
+                    || !report.complete && !report.message.starts_with(tr("Limite de resultados"))
                 {
                     archive.preserve_partial()?
                 } else {
                     archive.finish()?
                 };
-                report.message = format!(
-                    "{} registros salvos em {}. {}",
+                report.message = tf!(
+                    "{0} registros salvos em {1}. {2}",
                     report.matched,
                     saved.display(),
                     report.message
@@ -793,8 +805,8 @@ impl Backend {
             }
             Err(error) => {
                 let partial = archive.preserve_partial()?;
-                Err(error).context(format!(
-                    "Exportacao interrompida; prefixo preservado em {}",
+                Err(error).context(tf!(
+                    "Exportacao interrompida; prefixo preservado em {0}",
                     partial.display()
                 ))
             }
@@ -815,8 +827,7 @@ impl Backend {
             if preserve_partition {
                 ensure!(
                     parts.contains(&r.partition),
-                    "Particao {} do arquivo nao existe no destino",
-                    r.partition
+                    tf!("Particao {0} do arquivo nao existe no destino", r.partition)
                 );
             }
             total += 1;
@@ -825,11 +836,11 @@ impl Backend {
         if cancel.load(Ordering::Relaxed) {
             return Ok(OperationReport {
                 cancelled: true,
-                message: "Importacao cancelada antes de publicar".into(),
+                message: tr("Importacao cancelada antes de publicar").into(),
                 ..Default::default()
             });
         }
-        ensure!(total > 0, "Arquivo nao contem mensagens");
+        ensure!(total > 0, tr("Arquivo nao contem mensagens"));
         let mut window = DeliveryWindow::new(self.producer_config()?)?;
         let mut report = OperationReport::default();
         let mut last_progress = Instant::now();
@@ -852,7 +863,7 @@ impl Backend {
                 progress(Progress {
                     scanned: report.scanned,
                     delivered: window.delivered,
-                    phase: format!("Importando {}/{total}", window.delivered),
+                    phase: tf!("Importando {0}/{1}", window.delivered, total),
                     ..Default::default()
                 });
                 last_progress = Instant::now();
@@ -861,19 +872,25 @@ impl Backend {
         });
         let drained = window.finish();
         result.and(drained.map(|_| 0)).with_context(|| {
-            format!(
-                "Importacao parcial: {} de {total} mensagens confirmadas",
-                window.delivered
+            tf!(
+                "Importacao parcial: {0} de {1} mensagens confirmadas",
+                window.delivered,
+                total
             )
         })?;
         report.delivered = window.delivered;
         report.destination_offsets = window.receipts;
         report.cancelled |= cancel.load(Ordering::Relaxed) && report.delivered < total;
         report.complete = !report.cancelled && report.delivered == total;
-        report.message = format!(
-            "{} de {total} mensagens confirmadas{}",
+        report.message = tf!(
+            "{0} de {1} mensagens confirmadas{2}",
             report.delivered,
-            if report.cancelled { "; cancelado" } else { "" }
+            total,
+            if report.cancelled {
+                tr("; cancelado")
+            } else {
+                ""
+            }
         );
         progress(Progress {
             delivered: report.delivered,
@@ -894,7 +911,7 @@ impl Backend {
             || self.profile.bootstrap_servers == destination.profile.bootstrap_servers;
         ensure!(
             !same_cluster || !options.topics.contains(&replay.destination_topic),
-            "Replay exige um topico de destino diferente da origem"
+            tr("Replay exige um topico de destino diferente da origem")
         );
         let parts = destination.validate_destination(&replay.destination_topic, None)?;
         let mut window = DeliveryWindow::new(destination.producer_config()?)?;
@@ -906,7 +923,7 @@ impl Backend {
             |bounds| {
                 ensure!(
                     !replay.preserve_partition || bounds.keys().all(|(_, p)| parts.contains(p)),
-                    "Destino nao possui todas as particoes selecionadas"
+                    tr("Destino nao possui todas as particoes selecionadas")
                 );
                 Ok(())
             },
@@ -923,7 +940,7 @@ impl Backend {
                 if last_progress.elapsed() >= Duration::from_millis(200) {
                     progress(Progress {
                         delivered: window.delivered,
-                        phase: "Reproduzindo no destino".into(),
+                        phase: tr("Reproduzindo no destino").into(),
                         ..Default::default()
                     });
                     last_progress = Instant::now();
@@ -933,14 +950,18 @@ impl Backend {
         );
         let drained = window.finish();
         let mut report = result.with_context(|| {
-            format!("Replay parcial: {} mensagens confirmadas", window.delivered)
+            tf!(
+                "Replay parcial: {0} mensagens confirmadas",
+                window.delivered
+            )
         })?;
         drained?;
         report.delivered = window.delivered;
         report.destination_offsets = window.receipts;
-        report.message = format!(
-            "{} mensagens confirmadas no destino. {}",
-            report.delivered, report.message
+        report.message = tf!(
+            "{0} mensagens confirmadas no destino. {1}",
+            report.delivered,
+            report.message
         );
         progress(Progress {
             scanned: report.scanned,
@@ -962,7 +983,7 @@ impl Backend {
             if let Err((_, e)) = result
                 && e != RDKafkaErrorCode::TopicAlreadyExists
             {
-                bail!("Falha ao criar fixture: {e:?}");
+                bail!(tf!("Falha ao criar fixture: {0}", format!("{:?}", e)));
             }
         }
         let consumer = self.consumer(None)?;
@@ -971,10 +992,12 @@ impl Backend {
             match self.partitions(&consumer, name) {
                 Ok(parts) if parts.len() == partitions as usize => break,
                 result if Instant::now() >= deadline => {
-                    result.context(
+                    result.context(tr(
                         "A fixture foi criada, mas seus metadados nao ficaram disponiveis a tempo",
-                    )?;
-                    bail!("Numero de particoes da fixture ainda nao corresponde ao solicitado");
+                    ))?;
+                    bail!(tr(
+                        "Numero de particoes da fixture ainda nao corresponde ao solicitado"
+                    ));
                 }
                 _ => std::thread::sleep(Duration::from_millis(100)),
             }

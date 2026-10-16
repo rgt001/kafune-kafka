@@ -70,9 +70,10 @@ def main():
         shutil.copy2(args.binary, folder / "kafunekafka.exe")
         for dll in dlls:
             shutil.copy2(dll, folder / dll.name)
-        for name in ["README.md", "README.pt-BR.md", "RELEASE-NOTES.md", "LICENSE", "PERFORMANCE.md", "PERFORMANCE-WINDOWS-GUI.md"]:
+        for name in ["README.md", "README.pt-BR.md", "README.ru.md", "RELEASE-NOTES.md", "LICENSE", "PERFORMANCE.md", "PERFORMANCE-WINDOWS-GUI.md"]:
             shutil.copy2(ROOT / name, folder / name)
         shutil.copytree(ROOT / "assets", folder / "assets")
+        shutil.copytree(ROOT / "locales", folder / "locales")
         collect_licenses(ROOT, folder, metadata)
         manifest = {"application": "kafunekafka", "version": version, "platform": "windows-x64",
                     "packaged_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),

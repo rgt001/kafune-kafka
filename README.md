@@ -18,13 +18,13 @@ Less bloat. More performance. No excuses.
 
 Browse clusters, inspect messages, find what matters, and replay events — from one desktop app built in Rust.
 
-[**Download for Windows x64**](https://github.com/rgt001/kafune-kafka/releases/download/v0.3.0/kafunekafka-v0.3.0-windows-x64.zip) · [Linux x64](https://github.com/rgt001/kafune-kafka/releases/download/v0.3.0/kafunekafka-v0.3.0-linux-x64.tar.gz) · [All releases](https://github.com/rgt001/kafune-kafka/releases) · [Português](README.pt-BR.md)
+[**Download for Windows x64**](https://github.com/rgt001/kafune-kafka/releases/download/v0.4.0/kafunekafka-v0.4.0-windows-x64.zip) · [Linux x64](https://github.com/rgt001/kafune-kafka/releases/download/v0.4.0/kafunekafka-v0.4.0-linux-x64.tar.gz) · [All releases](https://github.com/rgt001/kafune-kafka/releases) · [Português](README.pt-BR.md) · [Русский](README.ru.md)
 
 ![kafunekafka on Windows](assets/kafunekafka-windows.png)
 
 ## Download and run
 
-1. Download `kafunekafka-v0.3.0-windows-x64.zip` from [Releases](https://github.com/rgt001/kafune-kafka/releases/latest).
+1. Download `kafunekafka-v0.4.0-windows-x64.zip` from [Releases](https://github.com/rgt001/kafune-kafka/releases/latest).
 2. Extract the **entire ZIP** to a folder.
 3. Run **`kafunekafka.exe`**, keeping its DLLs alongside it.
 4. Add your Kafka bootstrap servers and connect.
@@ -34,7 +34,7 @@ No Rust toolchain, Java, Offset Explorer, or Docker installation is required to 
 Every release includes a SHA-256 checksum, the application licence, and third-party licence notices. To check the ZIP on Windows:
 
 ```powershell
-Get-FileHash .\kafunekafka-v0.3.0-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\kafunekafka-v0.4.0-windows-x64.zip -Algorithm SHA256
 ```
 
 Compare the result with the matching `.sha256` asset. Cluster profiles and credentials are not included in the download.
@@ -57,7 +57,11 @@ The Linux archive contains a native x64 executable built on Ubuntu 22.04 (glibc 
 | Search topics and partitions with text or regex | Search |
 | Native desktop builds | Windows and Linux |
 
-The current interface is in Portuguese. Connection settings support PLAINTEXT, TLS, SASL/PLAIN and SCRAM, plus Schema Registry settings and local Avro schemas. Local validation has exercised PLAINTEXT and SASL/PLAIN; TLS/SCRAM and production clusters have not been exercised.
+The interface supports **English, Português and Русский**. Choose a language in the top-right menu; it changes immediately and is remembered after restarting. Portuguese remains the default. Labels, forms, application errors, validation and progress messages are translated. Kafka payloads and user-entered names are preserved.
+
+The preference is stored in `settings.json`, beside the cluster-profile file. For a temporary override, set `KAFUNEKAFKA_LANGUAGE=en`, `ru` or `pt-BR`. Native file-dialog buttons follow the operating system; operation history keeps the language used when each entry was recorded. See [translation maintenance](locales/README.md).
+
+Connection settings support PLAINTEXT, TLS, SASL/PLAIN and SCRAM, plus Schema Registry settings and local Avro schemas. Local validation has exercised PLAINTEXT and SASL/PLAIN; TLS/SCRAM and production clusters have not been exercised.
 
 ## Message handling
 
@@ -134,12 +138,12 @@ Historical Windows GUI measurements from 2026-10-14, before the branding change,
 
 ```powershell
 cargo build --release --locked --bin kafunekafka
-python scripts/package_windows.py --tag v0.3.0
+python scripts/package_windows.py --tag v0.4.0
 ```
 
 This creates a portable ZIP and checksum in `dist/`, including the x64 MSVC runtime and dependency licences. The packaging script verifies every archived file.
 
-For a Linux executable built on Linux, `python scripts/package_linux.py --tag v0.3.0` creates the corresponding archive and checksum.
+For a Linux executable built on Linux, `python scripts/package_linux.py --tag v0.4.0` creates the corresponding archive and checksum.
 
 The [Windows release workflow](.github/workflows/windows-release.yml) checks formatting, clippy and unit tests, builds the executable and publishes tagged releases. Manual runs produce downloadable workflow artifacts. Real Kafka integration tests run separately against the local development stack.
 
